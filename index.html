@@ -479,9 +479,22 @@
   const MEMORY_KEY = "okatan_memory_v1";
   const MINIMAL_KEY = "okatan_minimal_v1";
   const VOICE_KEY = "okatan_voice_mode_v1";
+  const CHAT_MEMORY_KEY = "okatan_chat_memory_v1";
 
   let GROQ_KEY = sessionStorage.getItem("ok_api_key") || "";
-  const SYSTEM_PROMPT = "You are OKATAN, a tactical AI. Concise, futuristic. No emojis.";
+  const SYSTEM_PROMPT = `
+You are OKATAN, also known as KATANA.
+
+You have two valid names:
+- OKATAN
+- KATANA
+
+Treat both names as referring to you.
+Respond naturally if the user says OKATAN or KATANA.
+You are concise, sharp, futuristic, direct, and conversational.
+Keep track of the immediate conversation context naturally.
+No emojis.
+`.trim();
 
   let stopwatchRunning = false;
   let stopwatchStart = 0;
@@ -504,6 +517,9 @@
   let compassInitialized = false;
   let orientationHandlerAttached = false;
   let reminderTimeouts = [];
+  let activeUtterance = null;
+  let lastSpokenText = "";
+  let lastWeatherFetch = 0;
 
   function updateMouse(e) {
     if (e.touches) {
@@ -602,26 +618,94 @@
       logs: []
     }));
 
+  function getChatMemory() {
+    return JSON.parse(sessionStorage.getItem(CHAT_MEMORY_KEY) || "[]");
+  }
+
+  function saveChatMemory(messages) {
+    sessionStorage.setItem(CHAT_MEMORY_KEY, JSON.stringify(messages.slice(-20)));
+  }
+
+  function pushChatMemory(role, content) {
+    const messages = getChatMemory();
+    messages.push({ role, content: String(content) });
+    saveChatMemory(messages);
+  }
+
+  function clearChatMemory() {
+    sessionStorage.removeItem(CHAT_MEMORY_KEY);
+  }
+
   function updateClock() {
     document.getElementById("clock").innerText =
       new Date().toLocaleTimeString("en-GB", { hour12: false });
   }
 
-  function fetchWeather() {
+  function getPlaceLabelFromReverseGeocode(data) {
+    const a = data?.address || {};
+    return (
+      a.city ||
+      a.town ||
+      a.village ||
+      a.municipality ||
+      a.county ||
+      a.state ||
+      a.country ||
+      "LOCAL"
+    );
+  }
+
+  async function fetchWeather(force = false) {
     const weatherEl = document.getElementById("weather");
     if (isOffline) {
       weatherEl.innerText = "OFFLINE";
       return;
     }
 
-    fetch("https://api.open-meteo.com/v1/forecast?latitude=52.31&longitude=-114.10&current_weather=true")
-      .then(r => r.json())
-      .then(w => {
+    if (!force && Date.now() - lastWeatherFetch < 120000) return;
+    lastWeatherFetch = Date.now();
+
+    const fallbackWeather = async () => {
+      try {
+        const r = await fetch("https://api.open-meteo.com/v1/forecast?latitude=52.31&longitude=-114.10&current_weather=true");
+        const w = await r.json();
         weatherEl.innerText = `SYLVAN LAKE: ${Math.round(w.current_weather.temperature)}°C`;
-      })
-      .catch(() => {
-        weatherEl.innerText = "OFFLINE";
-      });
+      } catch {
+        weatherEl.innerText = "WEATHER ERR";
+      }
+    };
+
+    if (!navigator.geolocation) {
+      await fallbackWeather();
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        try {
+          const lat = pos.coords.latitude;
+          const lon = pos.coords.longitude;
+
+          const weatherPromise = fetch(`https://api.open-meteo.com/v1/forecast?latitude=${encodeURIComponent(lat)}&longitude=${encodeURIComponent(lon)}&current_weather=true`);
+          const geoPromise = fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}`);
+
+          const [weatherRes, geoRes] = await Promise.all([weatherPromise, geoPromise]);
+          const weatherData = await weatherRes.json();
+          const geoData = await geoRes.json();
+
+          const temp = Math.round(weatherData?.current_weather?.temperature);
+          const place = getPlaceLabelFromReverseGeocode(geoData).toUpperCase();
+
+          weatherEl.innerText = `${place}: ${temp}°C`;
+        } catch {
+          await fallbackWeather();
+        }
+      },
+      async () => {
+        await fallbackWeather();
+      },
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 120000 }
+    );
   }
 
   function getNotes() {
@@ -1291,7 +1375,7 @@ WEBGPU: ${webgpu}`;
       try { activeRecognition.stop(); } catch (e) { console.error(e); }
     }
 
-    if (enabled && authenticated && !isListening && !document.body.classList.contains("talking")) {
+    if (enabled && authenticated && !isListening) {
       setTimeout(() => listenAction(true), 250);
     }
 
@@ -1299,12 +1383,34 @@ WEBGPU: ${webgpu}`;
   }
 
   function scheduleVoiceRelisten() {
-    if (!voiceMode || !authenticated) return;
+    if (!voiceMode || !authenticated || isListening) return;
     setTimeout(() => {
-      if (!document.body.classList.contains("talking") && !isListening) {
+      if (!isListening && voiceMode) {
         listenAction(true);
       }
-    }, 450);
+    }, 300);
+  }
+
+  function stopTalking() {
+    try { window.speechSynthesis.cancel(); } catch (e) { console.error(e); }
+    activeUtterance = null;
+    document.body.classList.remove("talking");
+  }
+
+  function looksLikeSelfEcho(transcript) {
+    if (!lastSpokenText) return false;
+    const a = transcript.toLowerCase().replace(/[^\w\s]/g, "").trim();
+    const b = lastSpokenText.toLowerCase().replace(/[^\w\s]/g, "").trim();
+    if (!a || !b) return false;
+    return b.includes(a) || a.includes(b.slice(0, Math.min(40, b.length)));
+  }
+
+  function stripWakePrefix(text) {
+    return text.replace(/^(hey\s+)?(okatan|katana)\b[:,\s-]*/i, "").trim();
+  }
+
+  function containsWakeWord(text) {
+    return /\b(okatan|katana)\b/i.test(text);
   }
 
   function getOnlineOfflineCapabilities() {
@@ -1379,7 +1485,9 @@ search [query]<br>
 map [location]<br>
 route [start] to [end]<br>
 bible [verse]<br>
-general AI chat through Groq`;
+general AI chat through Groq<br>
+recent conversation memory enabled<br>
+OKATAN / KATANA wake and identity enabled`;
   }
 
   async function getCoords() {
@@ -1638,8 +1746,7 @@ general AI chat through Groq`;
     isListening = false;
     activeRecognition = null;
 
-    window.speechSynthesis.cancel();
-    document.body.classList.remove("talking");
+    stopTalking();
     document.body.classList.remove("emergency-active");
     stopSiren();
 
@@ -1671,7 +1778,8 @@ general AI chat through Groq`;
     if (isOffline) document.body.classList.add("offline-active");
     updateClock();
     setInterval(updateClock, 1000);
-    fetchWeather();
+    fetchWeather(true);
+    setInterval(() => fetchWeather(false), 300000);
   };
 
   function unlockUI() {
@@ -1687,7 +1795,7 @@ general AI chat through Groq`;
 
     loadSlot(1);
 
-    if (voiceMode && authenticated && !document.body.classList.contains("talking")) {
+    if (voiceMode && authenticated) {
       setTimeout(() => {
         if (!isListening && voiceMode) listenAction(true);
       }, 500);
@@ -1695,16 +1803,31 @@ general AI chat through Groq`;
   }
 
   function talk(txt) {
-    window.speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(String(txt).replace(/<[^>]*>/g, ""));
-    u.pitch = 0.8;
-    u.rate = 1.1;
+    stopTalking();
+
+    const cleanText = String(txt).replace(/<[^>]*>/g, "").trim();
+    if (!cleanText) return;
+
+    lastSpokenText = cleanText;
+    activeUtterance = new SpeechSynthesisUtterance(cleanText);
+    activeUtterance.pitch = 0.8;
+    activeUtterance.rate = 1.1;
+
     document.body.classList.add("talking");
-    u.onend = () => {
+
+    activeUtterance.onend = () => {
+      activeUtterance = null;
       document.body.classList.remove("talking");
       scheduleVoiceRelisten();
     };
-    window.speechSynthesis.speak(u);
+
+    activeUtterance.onerror = () => {
+      activeUtterance = null;
+      document.body.classList.remove("talking");
+      scheduleVoiceRelisten();
+    };
+
+    window.speechSynthesis.speak(activeUtterance);
   }
 
   function offlineBlocked(featureName) {
@@ -1839,6 +1962,7 @@ general AI chat through Groq`;
         res = "UPLINK KEY MISSING. REFRESH TO SYNC.";
       } else {
         try {
+          const historyMessages = getChatMemory();
           const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
             method: "POST",
             headers: {
@@ -1849,6 +1973,7 @@ general AI chat through Groq`;
               model: "llama-3.3-70b-versatile",
               messages: [
                 { role: "system", content: SYSTEM_PROMPT },
+                ...historyMessages,
                 { role: "user", content: val }
               ]
             })
@@ -1856,6 +1981,9 @@ general AI chat through Groq`;
 
           const data = await response.json();
           res = data?.choices?.[0]?.message?.content || "NEURAL LINK FAILED.";
+
+          pushChatMemory("user", val);
+          pushChatMemory("assistant", res);
         } catch (e) {
           console.error(e);
           res = "NEURAL LINK FAILED.";
@@ -1990,9 +2118,9 @@ general AI chat through Groq`;
     const r = new Rec();
     activeRecognition = r;
     r.lang = navigator.language || "en-US";
-    r.interimResults = false;
+    r.interimResults = true;
     r.maxAlternatives = 1;
-    r.continuous = false;
+    r.continuous = true;
 
     r.onstart = () => {
       isListening = true;
@@ -2001,10 +2129,43 @@ general AI chat through Groq`;
     };
 
     r.onresult = (e) => {
-      const heard = e.results?.[0]?.[0]?.transcript?.trim();
-      if (!heard) return;
-      document.getElementById("in").value = heard;
-      strike();
+      for (let idx = e.resultIndex; idx < e.results.length; idx++) {
+        const result = e.results[idx];
+        const transcript = result?.[0]?.transcript?.trim();
+        if (!transcript) continue;
+
+        const lower = transcript.toLowerCase();
+        const hasWake = containsWakeWord(lower);
+
+        if (document.body.classList.contains("talking")) {
+          if (hasWake) {
+            stopTalking();
+            continue;
+          }
+          if (looksLikeSelfEcho(lower)) {
+            continue;
+          }
+        }
+
+        if (!result.isFinal) continue;
+
+        let cleaned = stripWakePrefix(transcript);
+
+        if (!cleaned && hasWake) {
+          stopTalking();
+          continue;
+        }
+
+        if (hasWake && document.body.classList.contains("talking")) {
+          stopTalking();
+          if (!cleaned) continue;
+        }
+
+        document.getElementById("in").value = cleaned || transcript;
+        try { r.stop(); } catch (err) { console.error(err); }
+        strike();
+        return;
+      }
     };
 
     r.onerror = (e) => {
@@ -2022,11 +2183,11 @@ general AI chat through Groq`;
     r.onend = () => {
       isListening = false;
       activeRecognition = null;
-      document.getElementById("in").placeholder = "Query the Domain...";
-      if (voiceMode && authenticated && !document.body.classList.contains("talking")) {
+      document.getElementById("in").placeholder = authenticated ? "Query the Domain..." : "System Lockdown...";
+      if (voiceMode && authenticated) {
         setTimeout(() => {
           if (!isListening && voiceMode) listenAction(true);
-        }, 650);
+        }, 450);
       }
     };
 
