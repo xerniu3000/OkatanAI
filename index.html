@@ -467,6 +467,7 @@
   let isPressing = false;
   let mouseX = 0, mouseY = 0;
   let sirenInterval = null;
+  let weatherInterval = null;
   const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
   const DB_KEY = "okatan_v8260_db";
@@ -481,7 +482,11 @@
   const VOICE_KEY = "okatan_voice_mode_v1";
 
   let GROQ_KEY = sessionStorage.getItem("ok_api_key") || "";
-  const SYSTEM_PROMPT = "You are OKATAN, a tactical AI. Concise, futuristic. No emojis.";
+  const SYSTEM_PROMPT = `You are OKATAN, also known as KATANA.
+You respond to both names interchangeably.
+If the user calls you Okatan or Katana, recognize both as yourself.
+Maintain a tactical, concise, futuristic tone.
+No emojis.`;
 
   let stopwatchRunning = false;
   let stopwatchStart = 0;
@@ -602,26 +607,93 @@
       logs: []
     }));
 
+  function stripHTML(html) {
+    const div = document.createElement("div");
+    div.innerHTML = String(html || "");
+    return (div.textContent || div.innerText || "").replace(/\s+/g, " ").trim();
+  }
+
+  function getRecentConversationMessages(limit = 20) {
+    const logs = (db[activeSlot]?.logs || [])
+      .filter(entry => entry && (entry.s === "user" || entry.s === "bot"))
+      .map(entry => ({
+        role: entry.s === "user" ? "user" : "assistant",
+        content: stripHTML(entry.t)
+      }))
+      .filter(entry => entry.content);
+
+    return logs.slice(-limit);
+  }
+
+  function buildGroqMessages() {
+    return [
+      { role: "system", content: SYSTEM_PROMPT },
+      ...getRecentConversationMessages(20)
+    ];
+  }
+
   function updateClock() {
     document.getElementById("clock").innerText =
       new Date().toLocaleTimeString("en-GB", { hour12: false });
   }
 
+  async function reverseGeocodeLabel(lat, lon) {
+    try {
+      const res = await fetch(
+        `https://geocoding-api.open-meteo.com/v1/reverse?latitude=${encodeURIComponent(lat)}&longitude=${encodeURIComponent(lon)}&language=en&format=json`
+      );
+      const data = await res.json();
+      const place = data?.results?.[0];
+      return (place?.city || place?.town || place?.village || place?.name || "LOCAL").toUpperCase();
+    } catch {
+      return "LOCAL";
+    }
+  }
+
+  async function fetchWeatherForCoords(lat, lon, fallbackLabel = "LOCAL") {
+    const weatherEl = document.getElementById("weather");
+
+    try {
+      const [weatherRes, label] = await Promise.all([
+        fetch(`https://api.open-meteo.com/v1/forecast?latitude=${encodeURIComponent(lat)}&longitude=${encodeURIComponent(lon)}&current_weather=true`),
+        reverseGeocodeLabel(lat, lon)
+      ]);
+
+      const weatherData = await weatherRes.json();
+      const temp = weatherData?.current_weather?.temperature;
+
+      if (typeof temp === "number") {
+        weatherEl.innerText = `${label || fallbackLabel}: ${Math.round(temp)}°C`;
+      } else {
+        weatherEl.innerText = `${fallbackLabel}: --°C`;
+      }
+    } catch {
+      weatherEl.innerText = "WEATHER OFFLINE";
+    }
+  }
+
   function fetchWeather() {
     const weatherEl = document.getElementById("weather");
+
     if (isOffline) {
       weatherEl.innerText = "OFFLINE";
       return;
     }
 
-    fetch("https://api.open-meteo.com/v1/forecast?latitude=52.31&longitude=-114.10&current_weather=true")
-      .then(r => r.json())
-      .then(w => {
-        weatherEl.innerText = `SYLVAN LAKE: ${Math.round(w.current_weather.temperature)}°C`;
-      })
-      .catch(() => {
-        weatherEl.innerText = "OFFLINE";
-      });
+    if (!navigator.geolocation) {
+      fetchWeatherForCoords(52.31, -114.10, "SYLVAN LAKE");
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        fetchWeatherForCoords(pos.coords.latitude, pos.coords.longitude, "LOCAL");
+      },
+      () => {
+        fetchWeatherForCoords(52.31, -114.10, "SYLVAN LAKE");
+      },
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 600000 }
+    );
   }
 
   function getNotes() {
@@ -995,6 +1067,11 @@ WEBGPU: ${webgpu}`;
     if (!text.trim()) return "EMPTY MEMORY.";
     const memory = getMemory();
     memory.push(text.trim());
+
+    if (memory.length > 20) {
+      memory.splice(0, memory.length - 20);
+    }
+
     saveMemory(memory);
     return "MEMORY STORED.";
   }
@@ -1669,9 +1746,13 @@ general AI chat through Groq`;
 
     if (authenticated) unlockUI();
     if (isOffline) document.body.classList.add("offline-active");
+
     updateClock();
     setInterval(updateClock, 1000);
+
     fetchWeather();
+    if (weatherInterval) clearInterval(weatherInterval);
+    weatherInterval = setInterval(fetchWeather, 600000);
   };
 
   function unlockUI() {
@@ -1847,10 +1928,7 @@ general AI chat through Groq`;
             },
             body: JSON.stringify({
               model: "llama-3.3-70b-versatile",
-              messages: [
-                { role: "system", content: SYSTEM_PROMPT },
-                { role: "user", content: val }
-              ]
+              messages: buildGroqMessages()
             })
           });
 
