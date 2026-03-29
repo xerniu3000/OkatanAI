@@ -1,0 +1,2462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+
+  <meta name="theme-color" content="#000a0d" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="OKATAN" />
+
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" type="image/png" sizes="32x32" href="okatan-icon-192.png" />
+  <link rel="icon" type="image/png" sizes="192x192" href="okatan-icon-192.png" />
+  <link rel="apple-touch-icon" href="okatan-icon-512.png" />
+
+  <title>OKATAN | V82.60</title>
+  <style>
+    :root { --halo: #4df2ff; --bg: #000a0d; }
+
+    body, html {
+      margin: 0;
+      padding: 0;
+      font-family: "Share Tech Mono", "Consolas", "Courier New", monospace;
+      background: var(--bg);
+      color: var(--halo);
+      height: 100dvh;
+      overflow: hidden;
+      transition: background 0.5s ease;
+      touch-action: none;
+    }
+
+    body.offline-active { --halo: #3eff4d !important; }
+    body.offline-active .bg-layer {
+      background: radial-gradient(circle at center, #005c1a 0%, #000a0d 100%) !important;
+    }
+
+    body.minimal-active .bg-layer {
+      animation: none !important;
+      opacity: 0.18 !important;
+    }
+
+    body.minimal-active #okatan-entity {
+      animation: none !important;
+      opacity: 0.55;
+      box-shadow: 0 0 10px var(--halo);
+    }
+
+    body.minimal-active .pulse-ring {
+      animation: none !important;
+      opacity: 0.25;
+      width: 22px !important;
+      height: 22px !important;
+    }
+
+    #orbit-canvas { position: absolute; inset: 0; z-index: 4; pointer-events: none; }
+
+    .emergency-active {
+      --halo: #ff3e3e !important;
+      background: #200 !important;
+      animation: glitch-shake 0.2s infinite;
+    }
+
+    .emergency-active .bg-layer {
+      background: radial-gradient(circle at center, #800 0%, #000 100%) !important;
+    }
+
+    @keyframes glitch-shake {
+      0% { transform: translate(0); text-shadow: 2px 0 red, -2px 0 blue; }
+      50% { transform: translate(-1px, 1px); text-shadow: -2px 0 red, 2px 0 blue; }
+      100% { transform: translate(0); }
+    }
+
+    .bg-layer {
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      background: radial-gradient(circle at center, #004b5c 0%, #000a0d 100%);
+      animation: bloom-inverted 6s infinite alternate ease-in-out;
+    }
+
+    @keyframes bloom-inverted {
+      0% { opacity: 0.8; }
+      100% { opacity: 0.1; }
+    }
+
+    #okatan-entity {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 80px;
+      height: 80px;
+      background: var(--halo);
+      margin: -40px;
+      z-index: 5;
+      animation: morph-rotate 12s infinite alternate ease-in-out, entity-shade 6s infinite alternate-reverse ease-in-out;
+      box-shadow: 0 0 30px var(--halo);
+      pointer-events: none;
+      transition: 0.5s;
+    }
+
+    @keyframes entity-shade {
+      0% { filter: brightness(1.8); }
+      100% { filter: brightness(0.3); }
+    }
+
+    @keyframes morph-rotate {
+      0% { border-radius: 50%; transform: rotate(0deg) scale(1); }
+      50% { border-radius: 10%; transform: rotate(180deg) scale(1.15); }
+      100% { border-radius: 50%; transform: rotate(360deg) scale(1); }
+    }
+
+    .talking #okatan-entity { animation: talking-pulse 0.2s infinite alternate !important; }
+
+    @keyframes talking-pulse {
+      0% { transform: scale(1); }
+      100% { transform: scale(1.3); filter: brightness(2); }
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 15px;
+      border-bottom: 2px solid var(--halo);
+      background: rgba(0,0,0,0.9);
+      z-index: 200;
+      position: relative;
+    }
+
+    .pulse-core {
+      width: 45px;
+      height: 45px;
+      position: absolute;
+      left: 15px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .pulse-ring {
+      position: absolute;
+      border: 1.5px solid var(--halo);
+      border-radius: 50%;
+      opacity: 0;
+      animation: wave-out 3s infinite linear;
+    }
+
+    .pulse-ring:nth-child(2) { animation-delay: 1s; }
+    .pulse-ring:nth-child(3) { animation-delay: 2s; }
+
+    .talking .pulse-ring {
+      animation-duration: 0.8s !important;
+      border-width: 3px;
+    }
+
+    .pulse-orb {
+      width: 18px;
+      height: 18px;
+      background: var(--halo);
+      border-radius: 50%;
+      z-index: 10;
+      box-shadow: 0 0 15px var(--halo), inset 0 0 5px #fff;
+      animation: core-breathe 2s infinite alternate ease-in-out;
+    }
+
+    .talking .pulse-orb { animation: talking-core 0.15s infinite alternate !important; }
+
+    @keyframes wave-out {
+      0% { width: 10px; height: 10px; opacity: 0.8; }
+      100% { width: 50px; height: 50px; opacity: 0; }
+    }
+
+    @keyframes core-breathe {
+      0% { transform: scale(0.9); filter: brightness(0.8); }
+      100% { transform: scale(1.1); filter: brightness(1.4); }
+    }
+
+    @keyframes talking-core {
+      0% { transform: scale(1.2); filter: brightness(2); }
+      100% { transform: scale(0.8); filter: brightness(1); }
+    }
+
+    .title-box { text-align: center; cursor: pointer; user-select: none; }
+    .title-box h1 { margin: 0; font-size: 24px; letter-spacing: 6px; }
+
+    #bridge-stats {
+      position: absolute;
+      right: 15px;
+      top: 12px;
+      text-align: right;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      pointer-events: none;
+    }
+
+    #clock { font-size: 11px; letter-spacing: 1px; }
+    #weather { font-size: 8px; opacity: 0.7; letter-spacing: 0.5px; white-space: nowrap; }
+
+    #menu {
+      position: absolute;
+      inset: 0;
+      background: rgba(0,10,13,0.98);
+      z-index: 300;
+      display: none;
+      padding: 70px 20px 20px;
+      overflow-y: auto;
+    }
+
+    .log-row {
+      display: flex;
+      margin-bottom: 8px;
+      border: 1px solid var(--halo);
+      background: rgba(0,0,0,0.5);
+    }
+
+    .log-id {
+      width: 50px;
+      background: var(--halo);
+      color: #000;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+
+    .log-name {
+      flex: 1;
+      padding: 12px;
+      color: #fff;
+      font-size: 14px;
+      outline: none;
+    }
+
+    .wipe-btn {
+      background: #ff3e3e;
+      color: #fff;
+      border: none;
+      padding: 0 15px;
+      cursor: pointer;
+    }
+
+    #visor {
+      height: calc(100dvh - 180px);
+      overflow-y: auto;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      z-index: 10;
+      position: relative;
+    }
+
+    .msg {
+      padding: 12px;
+      border: 1px solid var(--halo);
+      background: rgba(0, 20, 30, 0.85);
+      max-width: 85%;
+      font-size: 14px;
+      border-radius: 5px;
+      word-wrap: break-word;
+      line-height: 1.4;
+    }
+
+    .bot { align-self: flex-start; border-left: 4px solid var(--halo); }
+    .user {
+      align-self: flex-end;
+      border-right: 4px solid #fff;
+      color: #fff;
+      background: rgba(255,255,255,0.05);
+    }
+
+    footer {
+      position: fixed;
+      bottom: 0;
+      width: 100%;
+      padding: 15px;
+      display: flex;
+      gap: 10px;
+      background: #000;
+      z-index: 110;
+      border-top: 2px solid var(--halo);
+      box-sizing: border-box;
+    }
+
+    #in {
+      flex: 1;
+      background: transparent;
+      border: 1px solid var(--halo);
+      padding: 12px;
+      color: var(--halo);
+      font-family: inherit;
+      font-size: 16px;
+      outline: none;
+    }
+
+    .strike-btn {
+      background: var(--halo);
+      color: #000;
+      border: none;
+      padding: 0 20px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .mic-btn {
+      background: transparent;
+      border: 1px solid var(--halo);
+      color: var(--halo);
+      padding: 0 10px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      min-width: 50px;
+    }
+
+    .mic-dot {
+      width: 5px;
+      height: 5px;
+      background: var(--halo);
+      border-radius: 50%;
+      transition: all 0.3s ease;
+    }
+
+    .talking .mic-dot { border-radius: 2px; width: 3px; }
+    .talking .mic-dot:nth-child(1) { animation: mic-wave 0.5s infinite 0.1s alternate; }
+    .talking .mic-dot:nth-child(2) { animation: mic-wave 0.5s infinite 0.2s alternate; }
+    .talking .mic-dot:nth-child(3) { animation: mic-wave 0.5s infinite 0.3s alternate; }
+
+    @keyframes mic-wave {
+      0% { height: 4px; }
+      100% { height: 20px; }
+    }
+
+    .uplink-btn {
+      background: var(--halo);
+      color: #000;
+      border: none;
+      padding: 10px;
+      width: 100%;
+      margin-top: 10px;
+      font-weight: bold;
+      cursor: pointer;
+      font-family: inherit;
+    }
+
+    .system-card {
+      border: 1px solid var(--halo);
+      padding: 15px;
+      background: rgba(0,255,100,0.05);
+      margin-top: 10px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+  </style>
+</head>
+<body onmousedown="isPressing=true" onmouseup="isPressing=false" onmousemove="updateMouse(event)" ontouchstart="isPressing=true" ontouchend="isPressing=false" ontouchmove="updateMouse(event)">
+
+<div class="bg-layer"></div>
+<canvas id="orbit-canvas"></canvas>
+<div id="okatan-entity"></div>
+
+<header>
+  <div class="pulse-core" onclick="toggleMenu()">
+    <div class="pulse-ring"></div><div class="pulse-ring"></div><div class="pulse-ring"></div>
+    <div class="pulse-orb"></div>
+  </div>
+  <div class="title-box" onclick="toggleFullscreen()">
+    <h1>OKATAN</h1>
+    <div id="sub-label" style="font-size:10px;">LOCKED</div>
+  </div>
+  <div id="bridge-stats">
+    <div id="clock">--:--:--</div>
+    <div id="weather">LOCAL</div>
+  </div>
+</header>
+
+<div id="menu">
+  <div style="font-size: 20px; color: var(--halo); margin-bottom: 20px; cursor:pointer;" onclick="toggleMenu()">× CLOSE ARCHIVE</div>
+  <div id="log-list"></div>
+</div>
+
+<div id="visor"></div>
+
+<footer>
+  <button class="mic-btn" id="mic-trigger" onclick="startMic()">
+    <span class="mic-dot"></span><span class="mic-dot"></span><span class="mic-dot"></span>
+  </button>
+  <input id="in" placeholder="System Lockdown..." type="password" onkeydown="if(event.key==='Enter') strike();">
+  <button class="strike-btn" onclick="strike()">STRIKE</button>
+</footer>
+
+<script type="module">
+  import * as webllm from "https://esm.run/@mlc-ai/web-llm";
+
+  window.heavyBrain = null;
+  window.isSyncing = false;
+
+  const OFFLINE_MODEL_ID = "Llama-3.2-1B-Instruct-q4f16_1-MLC";
+
+  window.syncHeavyBrain = async function() {
+    if (window.isSyncing) return;
+    if (window.heavyBrain) {
+      addMsg("LOCAL CORE ALREADY MOUNTED.", "bot");
+      return;
+    }
+
+    window.isSyncing = true;
+    addMsg(`STAGING LOCAL CORE: ${OFFLINE_MODEL_ID}`, "bot");
+
+    try {
+      const inputEl = document.getElementById("in");
+
+      const engine = await webllm.CreateMLCEngine(OFFLINE_MODEL_ID, {
+        initProgressCallback: (p) => {
+          const progress = Math.round((p?.progress ?? 0) * 100);
+          inputEl.placeholder = `MOUNTING: ${progress}%`;
+        }
+      });
+
+      window.heavyBrain = engine;
+      addMsg("CORE STABILIZED. LOCAL LINK READY.", "bot");
+      inputEl.placeholder = "Query the Domain...";
+
+      if (typeof activeSlot !== "undefined" && activeSlot === 11) {
+        renderSystemPanel();
+      }
+    } catch (err) {
+      console.error(err);
+      addMsg(`NEURAL FAILURE: ${err?.message || "VRAM limit, unsupported browser, or WebGPU disabled."}`, "bot");
+      document.getElementById("in").placeholder = "Query the Domain...";
+    } finally {
+      window.isSyncing = false;
+    }
+  };
+
+  window.purgeHeavyBrain = async function() {
+    if (!confirm("DANGER: Disconnect Neural Link?")) return;
+
+    try {
+      if (window.heavyBrain?.unload) {
+        await window.heavyBrain.unload();
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      window.heavyBrain = null;
+      addMsg("NEURAL WIPE COMPLETE.", "bot");
+
+      if (typeof activeSlot !== "undefined" && activeSlot === 11) {
+        renderSystemPanel();
+      }
+    }
+  };
+</script>
+
+<script>
+  let authenticated = sessionStorage.getItem("ok_auth") === "true";
+  let isOffline = localStorage.getItem("ok_offline") === "true";
+  let activeSlot = 1;
+  let orbits = [];
+  let isPressing = false;
+  let mouseX = 0, mouseY = 0;
+  let sirenInterval = null;
+  let weatherInterval = null;
+  const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+  const DB_KEY = "okatan_v8260_db";
+  const NOTES_KEY = "okatan_notes_v1";
+  const SESSION_KEY = "okatan_session_v1";
+  const TASKS_KEY = "okatan_tasks_v1";
+  const ALARM_KEY = "okatan_alarm_v1";
+  const REMINDERS_KEY = "okatan_reminders_v1";
+  const CHECKLIST_KEY = "okatan_checklist_v1";
+  const MEMORY_KEY = "okatan_memory_v1";
+  const MINIMAL_KEY = "okatan_minimal_v1";
+  const VOICE_KEY = "okatan_voice_mode_v1";
+
+  const PROVIDER_KEY = "ok_ai_provider_v1";
+  const GROQ_KEY_STORE = "ok_api_key_groq";
+  const OPENAI_KEY_STORE = "ok_api_key_openai";
+  const GEMINI_KEY_STORE = "ok_api_key_gemini";
+
+  let selectedProvider = sessionStorage.getItem(PROVIDER_KEY) || "";
+
+  const SYSTEM_PROMPT = `You are OKATAN, also known as KATANA.
+You respond to both names interchangeably.
+If the user calls you Okatan or Katana, recognize both as yourself.
+Maintain a tactical, concise, futuristic tone.
+No emojis.`;
+
+  let stopwatchRunning = false;
+  let stopwatchStart = 0;
+  let stopwatchElapsed = 0;
+  let stopwatchInterval = null;
+
+  let countdownRunning = false;
+  let countdownEnd = 0;
+  let countdownInterval = null;
+
+  let alarmTimeout = null;
+  let flashlightStream = null;
+  let flashlightTrack = null;
+
+  let voiceMode = localStorage.getItem(VOICE_KEY) === "true";
+  let minimalMode = localStorage.getItem(MINIMAL_KEY) === "true";
+  let isListening = false;
+  let activeRecognition = null;
+  let interruptRecognition = null;
+  let interruptListening = false;
+  let compassHeading = null;
+  let compassInitialized = false;
+  let orientationHandlerAttached = false;
+  let reminderTimeouts = [];
+
+  function updateMouse(e) {
+    if (e.touches) {
+      mouseX = e.touches[0].clientX;
+      mouseY = e.touches[0].clientY;
+    } else {
+      mouseX = e.clientX;
+      mouseY = e.clientY;
+    }
+  }
+
+  function playTone(freq, type, duration, vol = 0.1) {
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+    gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime + duration);
+  }
+
+  function startSiren() {
+    if (sirenInterval) return;
+    sirenInterval = setInterval(() => {
+      playTone(950, "sawtooth", 0.4, 0.3);
+      setTimeout(() => playTone(650, "sawtooth", 0.4, 0.3), 200);
+    }, 450);
+  }
+
+  function stopSiren() {
+    clearInterval(sirenInterval);
+    sirenInterval = null;
+  }
+
+  const canvas = document.getElementById("orbit-canvas");
+  const ctx = canvas.getContext("2d");
+
+  function initOrbits() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    orbits = [];
+    const count = minimalMode ? 3 : 8;
+
+    for (let i = 0; i < count; i++) {
+      orbits.push({
+        angle: Math.random() * Math.PI * 2,
+        radius: 70 + (Math.random() * 40),
+        speed: minimalMode ? 0.004 + (Math.random() * 0.004) : 0.01 + (Math.random() * 0.015),
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height
+      });
+    }
+  }
+
+  function drawOrbits() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const cx = canvas.width / 2;
+    const cy = canvas.height / 2;
+
+    orbits.forEach(o => {
+      o.angle += o.speed;
+      const tx = cx + Math.cos(o.angle) * o.radius;
+      const ty = cy + Math.sin(o.angle) * o.radius;
+
+      if (isPressing && !minimalMode) {
+        o.x += (mouseX - o.x) * 0.15;
+        o.y += (mouseY - o.y) * 0.15;
+      } else {
+        o.x += (tx - o.x) * 0.1;
+        o.y += (ty - o.y) * 0.1;
+      }
+
+      const halo =
+        getComputedStyle(document.body).getPropertyValue("--halo").trim() ||
+        getComputedStyle(document.documentElement).getPropertyValue("--halo").trim();
+
+      ctx.fillStyle = halo;
+      ctx.beginPath();
+      ctx.arc(o.x, o.y, minimalMode ? 2.5 : 4, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    requestAnimationFrame(drawOrbits);
+  }
+
+  window.addEventListener("resize", initOrbits);
+  initOrbits();
+  drawOrbits();
+
+  let db = JSON.parse(localStorage.getItem(DB_KEY)) ||
+    Array(12).fill(null).map((_, i) => ({
+      id: i,
+      name: i === 11 ? "SYSTEM INFO" : `Archive Slot ${i}`,
+      logs: []
+    }));
+
+  function stripHTML(html) {
+    const div = document.createElement("div");
+    div.innerHTML = String(html || "");
+    return (div.textContent || div.innerText || "").replace(/\s+/g, " ").trim();
+  }
+
+  function getRecentConversationMessages(limit = 20) {
+    const logs = (db[activeSlot]?.logs || [])
+      .filter(entry => entry && (entry.s === "user" || entry.s === "bot"))
+      .map(entry => ({
+        role: entry.s === "user" ? "user" : "assistant",
+        content: stripHTML(entry.t)
+      }))
+      .filter(entry => entry.content);
+
+    return logs.slice(-limit);
+  }
+
+  function buildChatMessages() {
+    return [
+      { role: "system", content: SYSTEM_PROMPT },
+      ...getRecentConversationMessages(20)
+    ];
+  }
+
+  function buildGeminiPromptFromHistory() {
+    const logs = getRecentConversationMessages(20);
+    const transcript = logs.map(m => {
+      const who = m.role === "user" ? "USER" : "OKATAN";
+      return `${who}: ${m.content}`;
+    }).join("\n");
+
+    return `${SYSTEM_PROMPT}
+
+Conversation:
+${transcript}
+
+Respond as OKATAN.`;
+  }
+
+  function getProviderLabel(provider) {
+    if (provider === "groq") return "GROQ";
+    if (provider === "openai") return "OPENAI";
+    if (provider === "gemini") return "GEMINI";
+    return "UNKNOWN";
+  }
+
+  function getProviderKey(provider) {
+    if (provider === "groq") return sessionStorage.getItem(GROQ_KEY_STORE) || "";
+    if (provider === "openai") return sessionStorage.getItem(OPENAI_KEY_STORE) || "";
+    if (provider === "gemini") return sessionStorage.getItem(GEMINI_KEY_STORE) || "";
+    return "";
+  }
+
+  function setProviderKey(provider, key) {
+    if (provider === "groq") sessionStorage.setItem(GROQ_KEY_STORE, key);
+    if (provider === "openai") sessionStorage.setItem(OPENAI_KEY_STORE, key);
+    if (provider === "gemini") sessionStorage.setItem(GEMINI_KEY_STORE, key);
+  }
+
+  function chooseProviderWizard() {
+    let providerInput = prompt(
+      "CHOOSE AI PROVIDER:\nType one:\n- groq\n- openai\n- gemini",
+      selectedProvider || "groq"
+    );
+
+    if (!providerInput) return false;
+
+    providerInput = providerInput.trim().toLowerCase();
+
+    if (!["groq", "openai", "gemini"].includes(providerInput)) {
+      addMsg("INVALID PROVIDER. USE: groq / openai / gemini", "bot");
+      return false;
+    }
+
+    selectedProvider = providerInput;
+    sessionStorage.setItem(PROVIDER_KEY, selectedProvider);
+
+    const existingKey = getProviderKey(selectedProvider);
+    if (existingKey) return true;
+
+    const enteredKey = prompt(`ENTER ${getProviderLabel(selectedProvider)} API KEY:`);
+
+    if (!enteredKey || !enteredKey.trim()) {
+      addMsg(`${getProviderLabel(selectedProvider)} KEY NOT PROVIDED.`, "bot");
+      return false;
+    }
+
+    setProviderKey(selectedProvider, enteredKey.trim());
+    return true;
+  }
+
+  function ensureAIProviderReady() {
+    if (isOffline) return true;
+    if (selectedProvider && getProviderKey(selectedProvider)) return true;
+    return chooseProviderWizard();
+  }
+
+  async function askGroq() {
+    const key = getProviderKey("groq");
+    if (!key) return "GROQ KEY MISSING.";
+
+    try {
+      const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${key}`
+        },
+        body: JSON.stringify({
+          model: "llama-3.3-70b-versatile",
+          messages: buildChatMessages()
+        })
+      });
+
+      const data = await response.json();
+      return data?.choices?.[0]?.message?.content || "GROQ LINK FAILED.";
+    } catch (e) {
+      console.error(e);
+      return "GROQ LINK FAILED.";
+    }
+  }
+
+  async function askOpenAI() {
+    const key = getProviderKey("openai");
+    if (!key) return "OPENAI KEY MISSING.";
+
+    try {
+      const response = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${key}`
+        },
+        body: JSON.stringify({
+          model: "gpt-4o-mini",
+          messages: buildChatMessages()
+        })
+      });
+
+      const data = await response.json();
+      return data?.choices?.[0]?.message?.content || "OPENAI LINK FAILED.";
+    } catch (e) {
+      console.error(e);
+      return "OPENAI LINK FAILED.";
+    }
+  }
+
+  async function askGemini() {
+    const key = getProviderKey("gemini");
+    if (!key) return "GEMINI KEY MISSING.";
+
+    try {
+      const response = await fetch(
+        "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-goog-api-key": key
+          },
+          body: JSON.stringify({
+            contents: [
+              {
+                parts: [
+                  { text: buildGeminiPromptFromHistory() }
+                ]
+              }
+            ]
+          })
+        }
+      );
+
+      const data = await response.json();
+      return data?.candidates?.[0]?.content?.parts?.[0]?.text || "GEMINI LINK FAILED.";
+    } catch (e) {
+      console.error(e);
+      return "GEMINI LINK FAILED.";
+    }
+  }
+
+  async function askSelectedProvider() {
+    if (selectedProvider === "groq") return await askGroq();
+    if (selectedProvider === "openai") return await askOpenAI();
+    if (selectedProvider === "gemini") return await askGemini();
+    return "NO AI PROVIDER SELECTED.";
+  }
+
+  function updateClock() {
+    document.getElementById("clock").innerText =
+      new Date().toLocaleTimeString("en-GB", { hour12: false });
+  }
+
+  async function reverseGeocodeLabel(lat, lon) {
+    try {
+      const res = await fetch(
+        `https://geocoding-api.open-meteo.com/v1/reverse?latitude=${encodeURIComponent(lat)}&longitude=${encodeURIComponent(lon)}&language=en&format=json`
+      );
+      const data = await res.json();
+      const place = data?.results?.[0];
+      return (place?.city || place?.town || place?.village || place?.name || "LOCAL").toUpperCase();
+    } catch {
+      return "LOCAL";
+    }
+  }
+
+  async function fetchWeatherForCoords(lat, lon, fallbackLabel = "LOCAL") {
+    const weatherEl = document.getElementById("weather");
+
+    try {
+      const [weatherRes, label] = await Promise.all([
+        fetch(`https://api.open-meteo.com/v1/forecast?latitude=${encodeURIComponent(lat)}&longitude=${encodeURIComponent(lon)}&current_weather=true`),
+        reverseGeocodeLabel(lat, lon)
+      ]);
+
+      const weatherData = await weatherRes.json();
+      const temp = weatherData?.current_weather?.temperature;
+
+      if (typeof temp === "number") {
+        weatherEl.innerText = `${label || fallbackLabel}: ${Math.round(temp)}°C`;
+      } else {
+        weatherEl.innerText = `${fallbackLabel}: --°C`;
+      }
+    } catch {
+      weatherEl.innerText = "WEATHER OFFLINE";
+    }
+  }
+
+  function fetchWeather() {
+    const weatherEl = document.getElementById("weather");
+
+    if (isOffline) {
+      weatherEl.innerText = "OFFLINE";
+      return;
+    }
+
+    if (!navigator.geolocation) {
+      fetchWeatherForCoords(52.31, -114.10, "SYLVAN LAKE");
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        fetchWeatherForCoords(pos.coords.latitude, pos.coords.longitude, "LOCAL");
+      },
+      () => {
+        fetchWeatherForCoords(52.31, -114.10, "SYLVAN LAKE");
+      },
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 600000 }
+    );
+  }
+
+  function getNotes() {
+    return JSON.parse(localStorage.getItem(NOTES_KEY) || "[]");
+  }
+
+  function saveNotes(notes) {
+    localStorage.setItem(NOTES_KEY, JSON.stringify(notes));
+  }
+
+  function getTasks() {
+    return JSON.parse(localStorage.getItem(TASKS_KEY) || "[]");
+  }
+
+  function saveTasks(tasks) {
+    localStorage.setItem(TASKS_KEY, JSON.stringify(tasks));
+  }
+
+  function getChecklist() {
+    return JSON.parse(localStorage.getItem(CHECKLIST_KEY) || "[]");
+  }
+
+  function saveChecklist(list) {
+    localStorage.setItem(CHECKLIST_KEY, JSON.stringify(list));
+  }
+
+  function getMemory() {
+    return JSON.parse(localStorage.getItem(MEMORY_KEY) || "[]");
+  }
+
+  function saveMemory(memory) {
+    localStorage.setItem(MEMORY_KEY, JSON.stringify(memory));
+  }
+
+  function getReminders() {
+    return JSON.parse(localStorage.getItem(REMINDERS_KEY) || "[]");
+  }
+
+  function saveReminders(reminders) {
+    localStorage.setItem(REMINDERS_KEY, JSON.stringify(reminders));
+  }
+
+  function getAlarmData() {
+    return JSON.parse(localStorage.getItem(ALARM_KEY) || "null");
+  }
+
+  function saveAlarmData(data) {
+    localStorage.setItem(ALARM_KEY, JSON.stringify(data));
+  }
+
+  function clearAlarmData() {
+    localStorage.removeItem(ALARM_KEY);
+  }
+
+  function getSessionData() {
+    return JSON.parse(sessionStorage.getItem(SESSION_KEY) || '{"commands":0,"boot":0}');
+  }
+
+  function saveSessionData(data) {
+    sessionStorage.setItem(SESSION_KEY, JSON.stringify(data));
+  }
+
+  function bumpSessionCommandCount() {
+    const s = getSessionData();
+    if (!s.boot) s.boot = Date.now();
+    s.commands = (s.commands || 0) + 1;
+    saveSessionData(s);
+  }
+
+  function getSessionSummary() {
+    const s = getSessionData();
+    const boot = s.boot ? new Date(s.boot) : new Date();
+    const uptimeMs = Date.now() - boot.getTime();
+    const uptimeSec = Math.floor(uptimeMs / 1000);
+    return `SESSION:<br>BOOT: ${boot.toLocaleString()}<br>UPTIME: ${uptimeSec} SEC<br>COMMANDS: ${s.commands || 0}`;
+  }
+
+  function formatList(items, title) {
+    if (!items.length) return `${title}: EMPTY.`;
+    return `<b>${title}</b><br>` + items.map((x, i) => `${i + 1}. ${x}`).join("<br>");
+  }
+
+  function getArchiveSummary() {
+    const used = db.filter((slot, idx) => idx !== 0 && slot.logs && slot.logs.length > 0).length;
+    const totalLogs = db.reduce((sum, slot) => sum + ((slot.logs || []).length), 0);
+    return `ARCHIVES:<br>ACTIVE SLOT: ${activeSlot}<br>USED SLOTS: ${used}/11<br>TOTAL LOGS: ${totalLogs}`;
+  }
+
+  function getStatusSummary() {
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UNKNOWN";
+    return `STATUS:<br>
+MODE: ${isOffline ? "OFFLINE" : "ONLINE"}<br>
+AUTH: ${authenticated ? "AUTHORIZED" : "LOCKED"}<br>
+ARCHIVE: ${activeSlot}<br>
+TIMEZONE: ${timezone}<br>
+MINIMAL: ${minimalMode ? "ON" : "OFF"}<br>
+VOICE MODE: ${voiceMode ? "ON" : "OFF"}<br>
+MIC: ${(window.SpeechRecognition || window.webkitSpeechRecognition) ? "READY" : "UNAVAILABLE"}<br>
+LOCAL CORE: ${window.heavyBrain ? "MOUNTED" : "NOT MOUNTED"}<br>
+NETWORK FEATURES: ${isOffline ? "DISABLED" : "ENABLED"}<br>
+AI PROVIDER: ${selectedProvider ? getProviderLabel(selectedProvider) : "NONE"}`;
+  }
+
+  function getDeviceOnlySummary() {
+    const ua = navigator.userAgent || "UNKNOWN";
+    const platform = navigator.platform || "UNKNOWN";
+    const cores = navigator.hardwareConcurrency || "UNKNOWN";
+    const memory = navigator.deviceMemory ? `${navigator.deviceMemory} GB (est)` : "UNKNOWN";
+    const lang = navigator.language || "UNKNOWN";
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UNKNOWN";
+
+    return `DEVICE:<br>
+USER AGENT: ${ua}<br>
+PLATFORM: ${platform}<br>
+CORES: ${cores}<br>
+MEMORY: ${memory}<br>
+LANG: ${lang}<br>
+TIMEZONE: ${timezone}`;
+  }
+
+  function getScreenSummary() {
+    const screenRes = `${window.screen.width}x${window.screen.height}`;
+    const viewport = `${window.innerWidth}x${window.innerHeight}`;
+    const pixelRatio = window.devicePixelRatio || 1;
+    const touch = ("ontouchstart" in window || navigator.maxTouchPoints > 0) ? "YES" : "NO";
+    const orientation = window.innerWidth > window.innerHeight ? "LANDSCAPE" : "PORTRAIT";
+
+    return `SCREEN:<br>
+SCREEN: ${screenRes}<br>
+VIEWPORT: ${viewport}<br>
+PIXEL RATIO: ${pixelRatio}<br>
+ORIENTATION: ${orientation}<br>
+TOUCH: ${touch}`;
+  }
+
+  function getSystemSummary() {
+    const ua = navigator.userAgent || "UNKNOWN";
+    const platform = navigator.platform || "UNKNOWN";
+    const cores = navigator.hardwareConcurrency || "UNKNOWN";
+    const memory = navigator.deviceMemory ? `${navigator.deviceMemory} GB (est)` : "UNKNOWN";
+    const lang = navigator.language || "UNKNOWN";
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UNKNOWN";
+    const screenRes = `${window.screen.width}x${window.screen.height}`;
+    const viewport = `${window.innerWidth}x${window.innerHeight}`;
+    const pixelRatio = window.devicePixelRatio || 1;
+    const touch = ("ontouchstart" in window || navigator.maxTouchPoints > 0) ? "YES" : "NO";
+    const online = navigator.onLine ? "TRUE" : "FALSE";
+    const cookies = navigator.cookieEnabled ? "ENABLED" : "DISABLED";
+    const speechRec = (window.SpeechRecognition || window.webkitSpeechRecognition) ? "YES" : "NO";
+    const speechSynth = "speechSynthesis" in window ? "YES" : "NO";
+    const geo = "geolocation" in navigator ? "YES" : "NO";
+    const webgpu = "gpu" in navigator ? "YES" : "NO";
+
+    return `SYSTEM:<br>
+DEVICE: ${ua}<br>
+PLATFORM: ${platform}<br>
+CORES: ${cores}<br>
+MEMORY: ${memory}<br>
+LANG: ${lang}<br>
+TIMEZONE: ${timezone}<br><br>
+DISPLAY:<br>
+SCREEN: ${screenRes}<br>
+VIEWPORT: ${viewport}<br>
+PIXEL RATIO: ${pixelRatio}<br>
+TOUCH: ${touch}<br><br>
+STATE:<br>
+ONLINE: ${online}<br>
+COOKIES: ${cookies}<br>
+GEO: ${geo}<br>
+MIC/SPEECH REC: ${speechRec}<br>
+SPEECH SYNTH: ${speechSynth}<br>
+WEBGPU: ${webgpu}<br>
+AI PROVIDER: ${selectedProvider ? getProviderLabel(selectedProvider) : "NONE"}`;
+  }
+
+  async function getBatteryStatus() {
+    if (!navigator.getBattery) return "BATTERY API UNAVAILABLE.";
+    const battery = await navigator.getBattery();
+    return `BATTERY:<br>${Math.round(battery.level * 100)}%<br>${battery.charging ? "CHARGING" : "DISCHARGING"}`;
+  }
+
+  function formatMs(ms) {
+    const totalMs = Math.floor(ms);
+    const minutes = Math.floor(totalMs / 60000);
+    const seconds = Math.floor((totalMs % 60000) / 1000);
+    const millis = totalMs % 1000;
+    return `${String(minutes).padStart(2,"0")}:${String(seconds).padStart(2,"0")}.${String(millis).padStart(3,"0")}`;
+  }
+
+  function startStopwatch() {
+    if (stopwatchRunning) return "STOPWATCH ALREADY RUNNING.";
+    stopwatchRunning = true;
+    stopwatchStart = performance.now() - stopwatchElapsed;
+
+    stopwatchInterval = setInterval(() => {
+      stopwatchElapsed = performance.now() - stopwatchStart;
+    }, 10);
+
+    return "STOPWATCH STARTED.";
+  }
+
+  function stopStopwatch() {
+    if (!stopwatchRunning) return "STOPWATCH NOT RUNNING.";
+    stopwatchRunning = false;
+    clearInterval(stopwatchInterval);
+    stopwatchInterval = null;
+    return `STOPWATCH STOPPED: <b>${formatMs(stopwatchElapsed)}</b>`;
+  }
+
+  function resetStopwatch() {
+    stopwatchRunning = false;
+    clearInterval(stopwatchInterval);
+    stopwatchInterval = null;
+    stopwatchElapsed = 0;
+    stopwatchStart = 0;
+    return "STOPWATCH RESET.";
+  }
+
+  function stopwatchStatus() {
+    return `STOPWATCH: <b>${formatMs(stopwatchElapsed)}</b> ${stopwatchRunning ? "(RUNNING)" : "(STOPPED)"}`;
+  }
+
+  function startCountdown(seconds) {
+    if (!Number.isFinite(seconds) || seconds <= 0) return "INVALID COUNTDOWN VALUE.";
+    if (countdownRunning) return "COUNTDOWN ALREADY RUNNING.";
+
+    countdownRunning = true;
+    countdownEnd = Date.now() + (seconds * 1000);
+
+    countdownInterval = setInterval(() => {
+      const remaining = countdownEnd - Date.now();
+      if (remaining <= 0) {
+        clearInterval(countdownInterval);
+        countdownInterval = null;
+        countdownRunning = false;
+        countdownEnd = 0;
+
+        playTone(1200, "square", 0.2, 0.15);
+        setTimeout(() => playTone(900, "square", 0.2, 0.15), 250);
+        setTimeout(() => playTone(1200, "square", 0.2, 0.15), 500);
+
+        addMsg("COUNTDOWN COMPLETE.", "bot");
+        talk("Countdown complete.");
+      }
+    }, 100);
+
+    return `COUNTDOWN STARTED: ${seconds} SEC.`;
+  }
+
+  function countdownStatus() {
+    if (!countdownRunning) return "COUNTDOWN: IDLE.";
+    const remaining = Math.max(0, countdownEnd - Date.now());
+    return `COUNTDOWN: <b>${formatMs(remaining)}</b> REMAINING.`;
+  }
+
+  function stopCountdown() {
+    if (!countdownRunning) return "COUNTDOWN NOT RUNNING.";
+    clearInterval(countdownInterval);
+    countdownInterval = null;
+    countdownRunning = false;
+    countdownEnd = 0;
+    return "COUNTDOWN STOPPED.";
+  }
+
+  function parseCountdownInput(raw) {
+    const input = raw.trim().toLowerCase();
+
+    if (/^\d+$/.test(input)) return parseInt(input, 10);
+
+    const minMatch = input.match(/^(\d+)\s*(m|min|mins|minute|minutes)$/);
+    if (minMatch) return parseInt(minMatch[1], 10) * 60;
+
+    const secMatch = input.match(/^(\d+)\s*(s|sec|secs|second|seconds)$/);
+    if (secMatch) return parseInt(secMatch[1], 10);
+
+    const clockMatch = input.match(/^(\d+):(\d{1,2})$/);
+    if (clockMatch) return parseInt(clockMatch[1], 10) * 60 + parseInt(clockMatch[2], 10);
+
+    return NaN;
+  }
+
+  function flipCoin() {
+    return `COIN FLIP: <b>${Math.random() < 0.5 ? "HEADS" : "TAILS"}</b>`;
+  }
+
+  function rollDie(sides = 6) {
+    if (!Number.isFinite(sides) || sides < 2) return "INVALID DIE.";
+    const roll = Math.floor(Math.random() * sides) + 1;
+    return `D${sides} ROLL: <b>${roll}</b>`;
+  }
+
+  function chooseNumberBetween(min, max) {
+    if (!Number.isFinite(min) || !Number.isFinite(max) || max < min) return "INVALID RANGE.";
+    const n = Math.floor(Math.random() * (max - min + 1)) + min;
+    return `NUMBER PICK: <b>${n}</b>`;
+  }
+
+  function chooseLetter() {
+    const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    return `LETTER PICK: <b>${letters[Math.floor(Math.random() * letters.length)]}</b>`;
+  }
+
+  function chooseLetterRange(start, end) {
+    const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    const s = letters.indexOf(String(start).toUpperCase());
+    const e = letters.indexOf(String(end).toUpperCase());
+    if (s === -1 || e === -1 || e < s) return "INVALID LETTER RANGE.";
+    const idx = Math.floor(Math.random() * (e - s + 1)) + s;
+    return `LETTER PICK: <b>${letters[idx]}</b>`;
+  }
+
+  function getTaskList() {
+    const tasks = getTasks();
+    if (!tasks.length) return "TASKS: EMPTY.";
+    return `<b>TASKS</b><br>` + tasks.map((t, i) => `${i + 1}. ${t.done ? "[DONE]" : "[ ]"} ${t.text}`).join("<br>");
+  }
+
+  function addTask(text) {
+    if (!text.trim()) return "EMPTY TASK.";
+    const tasks = getTasks();
+    tasks.push({ text: text.trim(), done: false });
+    saveTasks(tasks);
+    return "TASK ADDED.";
+  }
+
+  function completeTask(index) {
+    const tasks = getTasks();
+    if (!tasks[index]) return "TASK NOT FOUND.";
+    tasks[index].done = true;
+    saveTasks(tasks);
+    return `TASK ${index + 1} COMPLETE.`;
+  }
+
+  function clearTasks() {
+    saveTasks([]);
+    return "TASKS CLEARED.";
+  }
+
+  function getChecklistSummary() {
+    const list = getChecklist();
+    if (!list.length) return "CHECKLIST: EMPTY.";
+    return `<b>CHECKLIST</b><br>` + list.map((item, i) => `${i + 1}. ${item.done ? "[X]" : "[ ]"} ${item.text}`).join("<br>");
+  }
+
+  function addChecklistItem(text) {
+    if (!text.trim()) return "EMPTY CHECKLIST ITEM.";
+    const list = getChecklist();
+    list.push({ text: text.trim(), done: false });
+    saveChecklist(list);
+    return "CHECKLIST ITEM ADDED.";
+  }
+
+  function completeChecklistItem(index) {
+    const list = getChecklist();
+    if (!list[index]) return "CHECKLIST ITEM NOT FOUND.";
+    list[index].done = true;
+    saveChecklist(list);
+    return `CHECKLIST ITEM ${index + 1} COMPLETE.`;
+  }
+
+  function clearChecklist() {
+    saveChecklist([]);
+    return "CHECKLIST CLEARED.";
+  }
+
+  function getMemorySummary() {
+    const memory = getMemory();
+    if (!memory.length) return "MEMORY: EMPTY.";
+    return `<b>MEMORY</b><br>` + memory.map((item, i) => `${i + 1}. ${item}`).join("<br>");
+  }
+
+  function addMemory(text) {
+    if (!text.trim()) return "EMPTY MEMORY.";
+    const memory = getMemory();
+    memory.push(text.trim());
+
+    if (memory.length > 20) {
+      memory.splice(0, memory.length - 20);
+    }
+
+    saveMemory(memory);
+    return "MEMORY STORED.";
+  }
+
+  function forgetMemory(index) {
+    const memory = getMemory();
+    if (!memory[index]) return "MEMORY NOT FOUND.";
+    memory.splice(index, 1);
+    saveMemory(memory);
+    return `MEMORY ${index + 1} REMOVED.`;
+  }
+
+  function forgetAllMemory() {
+    saveMemory([]);
+    return "MEMORY CLEARED.";
+  }
+
+  function clearReminderTimeouts() {
+    reminderTimeouts.forEach(id => clearTimeout(id));
+    reminderTimeouts = [];
+  }
+
+  function removeReminderById(id) {
+    const reminders = getReminders().filter(r => r.id !== id);
+    saveReminders(reminders);
+  }
+
+  function triggerReminder(reminder) {
+    playTone(1300, "square", 0.2, 0.18);
+    setTimeout(() => playTone(1000, "square", 0.2, 0.18), 220);
+    setTimeout(() => playTone(1300, "square", 0.2, 0.18), 440);
+
+    addMsg(`REMINDER: ${reminder.text}`, "bot");
+    talk(`Reminder. ${reminder.text}`);
+    removeReminderById(reminder.id);
+  }
+
+  function scheduleReminder(reminder) {
+    const delay = reminder.target - Date.now();
+    if (delay <= 0) {
+      triggerReminder(reminder);
+      return;
+    }
+
+    const timeoutId = setTimeout(() => {
+      triggerReminder(reminder);
+    }, delay);
+
+    reminderTimeouts.push(timeoutId);
+  }
+
+  function restoreReminders() {
+    clearReminderTimeouts();
+    const reminders = getReminders();
+    reminders.forEach(scheduleReminder);
+  }
+
+  function setReminderIn(seconds, text) {
+    if (!Number.isFinite(seconds) || seconds <= 0) return "INVALID REMINDER TIME.";
+    if (!text.trim()) return "EMPTY REMINDER.";
+    const reminder = {
+      id: `rem_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      text: text.trim(),
+      target: Date.now() + seconds * 1000
+    };
+    const reminders = getReminders();
+    reminders.push(reminder);
+    saveReminders(reminders);
+    scheduleReminder(reminder);
+    return `REMINDER SET FOR ${seconds} SEC FROM NOW.`;
+  }
+
+  function setReminderAt(hh, mm, text) {
+    hh = Number(hh);
+    mm = Number(mm);
+    if (!Number.isFinite(hh) || !Number.isFinite(mm) || hh < 0 || hh > 23 || mm < 0 || mm > 59) return "INVALID REMINDER TIME.";
+    if (!text.trim()) return "EMPTY REMINDER.";
+
+    const target = new Date();
+    target.setHours(hh, mm, 0, 0);
+    if (target.getTime() <= Date.now()) target.setDate(target.getDate() + 1);
+
+    const reminder = {
+      id: `rem_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      text: text.trim(),
+      target: target.getTime()
+    };
+    const reminders = getReminders();
+    reminders.push(reminder);
+    saveReminders(reminders);
+    scheduleReminder(reminder);
+    return `REMINDER SET FOR <b>${target.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</b>`;
+  }
+
+  function getRemindersSummary() {
+    const reminders = getReminders().sort((a, b) => a.target - b.target);
+    if (!reminders.length) return "REMINDERS: EMPTY.";
+    return `<b>REMINDERS</b><br>` + reminders.map((r, i) => {
+      const remaining = Math.max(0, r.target - Date.now());
+      return `${i + 1}. ${r.text} <br>&nbsp;&nbsp;ETA: ${formatMs(remaining)}`;
+    }).join("<br>");
+  }
+
+  function clearReminders() {
+    clearReminderTimeouts();
+    saveReminders([]);
+    return "REMINDERS CLEARED.";
+  }
+
+  function stopAlarm() {
+    if (alarmTimeout) {
+      clearTimeout(alarmTimeout);
+      alarmTimeout = null;
+    }
+    clearAlarmData();
+    return "ALARM CLEARED.";
+  }
+
+  function triggerAlarm() {
+    playTone(1300, "square", 0.2, 0.2);
+    setTimeout(() => playTone(900, "square", 0.2, 0.2), 250);
+    setTimeout(() => playTone(1300, "square", 0.2, 0.2), 500);
+    addMsg("ALARM TRIGGERED.", "bot");
+    talk("Alarm triggered.");
+    clearAlarmData();
+    alarmTimeout = null;
+  }
+
+  function setAlarmFromNow(seconds) {
+    if (!Number.isFinite(seconds) || seconds <= 0) return "INVALID ALARM VALUE.";
+    stopAlarm();
+    const target = Date.now() + seconds * 1000;
+    saveAlarmData({ target });
+    alarmTimeout = setTimeout(triggerAlarm, seconds * 1000);
+    return `ALARM SET FOR ${seconds} SEC FROM NOW.`;
+  }
+
+  function setAlarmAt(hh, mm) {
+    hh = Number(hh);
+    mm = Number(mm);
+    if (!Number.isFinite(hh) || !Number.isFinite(mm) || hh < 0 || hh > 23 || mm < 0 || mm > 59) return "INVALID ALARM TIME.";
+
+    stopAlarm();
+    const now = new Date();
+    const target = new Date();
+    target.setHours(hh, mm, 0, 0);
+    if (target <= now) target.setDate(target.getDate() + 1);
+
+    const diffMs = target.getTime() - now.getTime();
+    saveAlarmData({ target: target.getTime() });
+    alarmTimeout = setTimeout(triggerAlarm, diffMs);
+
+    return `ALARM SET FOR <b>${target.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</b>`;
+  }
+
+  function getAlarmStatus() {
+    const alarm = getAlarmData();
+    if (!alarm || !alarm.target) return "ALARM: IDLE.";
+    const remaining = alarm.target - Date.now();
+    if (remaining <= 0) return "ALARM: TRIGGERING.";
+    return `ALARM: <b>${formatMs(remaining)}</b> REMAINING.`;
+  }
+
+  async function flashlightOn() {
+    try {
+      if (!navigator.mediaDevices?.getUserMedia) return "FLASHLIGHT UNAVAILABLE.";
+      if (flashlightTrack) return "FLASHLIGHT ALREADY ON.";
+
+      flashlightStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: "environment" } }
+      });
+
+      flashlightTrack = flashlightStream.getVideoTracks()[0];
+      const capabilities = flashlightTrack.getCapabilities?.();
+
+      if (!capabilities || !capabilities.torch) {
+        flashlightStream.getTracks().forEach(t => t.stop());
+        flashlightStream = null;
+        flashlightTrack = null;
+        return "FLASHLIGHT NOT SUPPORTED ON THIS DEVICE/BROWSER.";
+      }
+
+      await flashlightTrack.applyConstraints({ advanced: [{ torch: true }] });
+      return "FLASHLIGHT ON.";
+    } catch (e) {
+      console.error(e);
+      flashlightStream?.getTracks?.().forEach(t => t.stop());
+      flashlightStream = null;
+      flashlightTrack = null;
+      return "FLASHLIGHT FAILED.";
+    }
+  }
+
+  async function flashlightOff() {
+    try {
+      if (!flashlightTrack) return "FLASHLIGHT NOT ACTIVE.";
+      const capabilities = flashlightTrack.getCapabilities?.();
+      if (capabilities?.torch) {
+        await flashlightTrack.applyConstraints({ advanced: [{ torch: false }] });
+      }
+      flashlightStream?.getTracks?.().forEach(t => t.stop());
+      flashlightStream = null;
+      flashlightTrack = null;
+      return "FLASHLIGHT OFF.";
+    } catch (e) {
+      console.error(e);
+      flashlightStream?.getTracks?.().forEach(t => t.stop());
+      flashlightStream = null;
+      flashlightTrack = null;
+      return "FLASHLIGHT SHUTDOWN FAILED.";
+    }
+  }
+
+  function directionFromHeading(heading) {
+    const dirs = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
+    const idx = Math.round(heading / 45) % 8;
+    return dirs[idx];
+  }
+
+  function onCompassOrientation(event) {
+    let heading = null;
+
+    if (typeof event.webkitCompassHeading === "number") {
+      heading = event.webkitCompassHeading;
+    } else if (typeof event.alpha === "number") {
+      heading = 360 - event.alpha;
+    }
+
+    if (typeof heading === "number" && !Number.isNaN(heading)) {
+      compassHeading = ((heading % 360) + 360) % 360;
+    }
+  }
+
+  function attachCompassListener() {
+    if (orientationHandlerAttached) return;
+    window.addEventListener("deviceorientation", onCompassOrientation, true);
+    orientationHandlerAttached = true;
+  }
+
+  async function ensureCompassReady() {
+    if (!window.DeviceOrientationEvent) {
+      return "COMPASS NOT SUPPORTED ON THIS DEVICE/BROWSER.";
+    }
+
+    if (!compassInitialized) {
+      if (typeof DeviceOrientationEvent.requestPermission === "function") {
+        try {
+          const permission = await DeviceOrientationEvent.requestPermission();
+          if (permission !== "granted") {
+            return "COMPASS PERMISSION DENIED.";
+          }
+        } catch (e) {
+          console.error(e);
+          return "COMPASS PERMISSION FAILED.";
+        }
+      }
+
+      attachCompassListener();
+      compassInitialized = true;
+    }
+
+    return null;
+  }
+
+  async function getCompassReading() {
+    const error = await ensureCompassReady();
+    if (error) return error;
+
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        if (typeof compassHeading !== "number") {
+          resolve("COMPASS UNAVAILABLE OR NO SENSOR DATA.");
+          return;
+        }
+
+        const rounded = Math.round(compassHeading);
+        resolve(`COMPASS:<br>HEADING: ${rounded}°<br>DIRECTION: ${directionFromHeading(rounded)}`);
+      }, 600);
+    });
+  }
+
+  function normalizeInterruptPhrase(text) {
+    return String(text || "")
+      .toLowerCase()
+      .replace(/[^\w\s]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  function isInterruptCommand(text) {
+    const heard = normalizeInterruptPhrase(text);
+    return (
+      heard === "stop" ||
+      heard === "hey okatan stop" ||
+      heard === "hey katana stop"
+    );
+  }
+
+  function stopInterruptListener() {
+    const oldRecognition = interruptRecognition;
+    interruptRecognition = null;
+    interruptListening = false;
+
+    if (oldRecognition) {
+      try { oldRecognition.onstart = null; } catch (e) { console.error(e); }
+      try { oldRecognition.onresult = null; } catch (e) { console.error(e); }
+      try { oldRecognition.onerror = null; } catch (e) { console.error(e); }
+      try { oldRecognition.onend = null; } catch (e) { console.error(e); }
+      try { oldRecognition.stop(); } catch (e) { console.error(e); }
+    }
+  }
+
+  function stopTalking() {
+    try {
+      window.speechSynthesis.cancel();
+    } catch (e) {
+      console.error(e);
+    }
+
+    document.body.classList.remove("talking");
+    stopInterruptListener();
+  }
+
+  function startInterruptListener() {
+    const Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!Rec) return;
+    if (!document.body.classList.contains("talking")) return;
+
+    stopInterruptListener();
+
+    const r = new Rec();
+    interruptRecognition = r;
+    r.lang = navigator.language || "en-US";
+    r.interimResults = false;
+    r.maxAlternatives = 3;
+    r.continuous = true;
+
+    r.onstart = () => {
+      interruptListening = true;
+    };
+
+    r.onresult = (e) => {
+      const results = e.results || [];
+      for (let i = e.resultIndex || 0; i < results.length; i++) {
+        const transcript = results[i]?.[0]?.transcript?.trim();
+        if (!transcript) continue;
+
+        if (isInterruptCommand(transcript)) {
+          stopTalking();
+          scheduleVoiceRelisten();
+          return;
+        }
+      }
+    };
+
+    r.onerror = (e) => {
+      console.error(e);
+      interruptListening = false;
+
+      const harmless =
+        e?.error === "aborted" ||
+        e?.error === "no-speech" ||
+        e?.error === "network";
+
+      if (!harmless) {
+        stopInterruptListener();
+      }
+    };
+
+    r.onend = () => {
+      interruptListening = false;
+
+      if (interruptRecognition !== r) return;
+
+      if (document.body.classList.contains("talking")) {
+        try {
+          r.start();
+        } catch (e) {
+          console.error(e);
+          stopInterruptListener();
+        }
+      } else {
+        stopInterruptListener();
+      }
+    };
+
+    try {
+      r.start();
+    } catch (e) {
+      console.error(e);
+      stopInterruptListener();
+    }
+  }
+
+  function applyMinimalMode(enabled) {
+    minimalMode = enabled;
+    localStorage.setItem(MINIMAL_KEY, String(enabled));
+    document.body.classList.toggle("minimal-active", enabled);
+    initOrbits();
+  }
+
+  function setVoiceMode(enabled) {
+    voiceMode = enabled;
+    localStorage.setItem(VOICE_KEY, String(enabled));
+
+    if (!enabled && activeRecognition) {
+      try { activeRecognition.stop(); } catch (e) { console.error(e); }
+    }
+
+    if (!enabled) {
+      stopInterruptListener();
+    }
+
+    if (enabled && authenticated && !isListening && !document.body.classList.contains("talking")) {
+      setTimeout(() => listenAction(true), 250);
+    }
+
+    return `VOICE MODE ${enabled ? "ON" : "OFF"}.`;
+  }
+
+  function scheduleVoiceRelisten() {
+    if (!voiceMode || !authenticated) return;
+    setTimeout(() => {
+      if (!document.body.classList.contains("talking") && !isListening) {
+        listenAction(true);
+      }
+    }, 450);
+  }
+
+  function getOnlineOfflineCapabilities() {
+    return `<b>OFFLINE MODE</b><br>
+help = PANIC MODE ON<br>
+clear = PANIC MODE OFF<br>
+lock mode<br>
+voice mode on<br>
+voice mode off<br>
+basic math: 1×1.00023÷4<br>
+calc [expression]<br>
+status<br>
+system<br>
+device<br>
+screen<br>
+date<br>
+time<br>
+battery<br>
+session<br>
+archives<br>
+coords<br>
+compass<br>
+note [text]<br>
+notes<br>
+clear notes<br>
+remember [text]<br>
+recall<br>
+forget [number]<br>
+forget all<br>
+task add [text]<br>
+task list<br>
+task done [number]<br>
+task clear<br>
+check add [text]<br>
+check list<br>
+check done [number]<br>
+check clear<br>
+stopwatch start<br>
+stopwatch stop<br>
+stopwatch reset<br>
+stopwatch status<br>
+countdown 5m<br>
+countdown 300<br>
+countdown 05:00<br>
+countdown status<br>
+countdown stop<br>
+alarm 5m<br>
+alarm 07:30<br>
+alarm status<br>
+alarm stop<br>
+remind me in 15m [text]<br>
+remind me at 19:30 [text]<br>
+reminders<br>
+clear reminders<br>
+flip coin<br>
+roll die<br>
+roll d20<br>
+choose number 1 50<br>
+choose a number between 1 and 50<br>
+choose letter<br>
+choose letter a f<br>
+flashlight on<br>
+flashlight off<br>
+minimal on<br>
+minimal off<br><br>
+<b>ONLINE MODE</b><br>
+lock mode<br>
+voice mode on<br>
+voice mode off<br>
+basic math: 1×1.00023÷4<br>
+search [query]<br>
+map [location]<br>
+route [start] to [end]<br>
+bible [verse]<br>
+general AI chat through selected provider<br>
+use groq<br>
+use openai<br>
+use gemini<br>
+provider`;
+  }
+
+  async function getCoords() {
+    if (!navigator.geolocation) return "COORDINATES UNAVAILABLE.";
+    return new Promise((resolve) => {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          resolve(`COORDINATES:<br>LAT: ${pos.coords.latitude.toFixed(6)}<br>LON: ${pos.coords.longitude.toFixed(6)}<br>ACC: ${Math.round(pos.coords.accuracy)}m`);
+        },
+        () => resolve("COORDINATE LOCK FAILED."),
+        { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
+      );
+    });
+  }
+
+  function systemHeuristicsHTML() {
+    return `<div class="system-card">
+      <b>[ OKATAN HEURISTICS ]</b><br><br>
+      SPECTRUM: ${isOffline ? "OFFLINE (GREEN)" : "CLOUD (CYAN)"}<br>
+      CORE: ${isOffline ? "UTILITY MODE" : (selectedProvider ? `${getProviderLabel(selectedProvider)} LINK` : "NO AI LINK")}<br>
+      MINIMAL: ${minimalMode ? "ON" : "OFF"}<br>
+      VOICE MODE: ${voiceMode ? "ON" : "OFF"}<br><br>
+      <button class="uplink-btn" onclick="toggleSpectrum()">TOGGLE SPECTRUM</button>
+      <button class="uplink-btn" onclick="showSystemInfo('capabilities')">VIEW ONLINE / OFFLINE CAPABILITIES</button>
+      <button class="uplink-btn" onclick="showSystemInfo('status')">STATUS</button>
+      <button class="uplink-btn" onclick="location.reload()">REBOOT INTERFACE</button>
+    </div>`;
+  }
+
+  function renderSystemPanel(detailHTML = "") {
+    const visor = document.getElementById("visor");
+    visor.innerHTML = "";
+
+    const top = document.createElement("div");
+    top.className = "msg bot";
+    top.innerHTML = systemHeuristicsHTML();
+    visor.appendChild(top);
+
+    if (detailHTML) {
+      const detail = document.createElement("div");
+      detail.className = "msg bot";
+      detail.innerHTML = `<div class="system-card">${detailHTML}</div>`;
+      visor.appendChild(detail);
+    }
+
+    visor.scrollTop = visor.scrollHeight;
+  }
+
+  function showSystemInfo(type) {
+    if (activeSlot !== 11) return;
+
+    let html = "";
+    if (type === "capabilities") html = getOnlineOfflineCapabilities();
+    else if (type === "status") html = getStatusSummary();
+    else if (type === "device") html = getDeviceOnlySummary();
+    else if (type === "screen") html = getScreenSummary();
+    else if (type === "system") html = getSystemSummary();
+
+    renderSystemPanel(html);
+  }
+
+  async function offlineCommand(raw) {
+    const val = raw.trim();
+    const low = val.toLowerCase();
+
+    if (low === "help" || low === "offline help" || low === "capabilities" || low === "modes") {
+      return getOnlineOfflineCapabilities();
+    }
+
+    if (low === "status") return getStatusSummary();
+    if (low === "device") return getDeviceOnlySummary();
+    if (low === "screen") return getScreenSummary();
+    if (low === "system") return getSystemSummary();
+    if (low === "date") return `DATE: <b>${new Date().toLocaleDateString()}</b>`;
+    if (low === "time") return `TIME: <b>${new Date().toLocaleTimeString()}</b>`;
+    if (low === "session") return getSessionSummary();
+    if (low === "archives") return getArchiveSummary();
+    if (low === "battery") return await getBatteryStatus();
+    if (low === "coords" || low === "coordinates") return await getCoords();
+    if (low === "compass") return await getCompassReading();
+
+    if (low.startsWith("note ")) {
+      const note = val.slice(5).trim();
+      if (!note) return "EMPTY NOTE.";
+      const notes = getNotes();
+      notes.push(note);
+      saveNotes(notes);
+      return "NOTE STORED.";
+    }
+
+    if (low === "notes") return formatList(getNotes(), "STORED NOTES");
+
+    if (low === "clear notes") {
+      saveNotes([]);
+      return "NOTES PURGED.";
+    }
+
+    if (low.startsWith("remember ")) {
+      return addMemory(val.slice(9));
+    }
+
+    if (low === "recall" || low === "memory") {
+      return getMemorySummary();
+    }
+
+    if (low.startsWith("forget ")) {
+      const arg = low.slice(7).trim();
+      if (arg === "all") return forgetAllMemory();
+      const idx = parseInt(arg, 10) - 1;
+      if (!Number.isFinite(idx)) return "USE: forget 1 OR forget all";
+      return forgetMemory(idx);
+    }
+
+    if (low === "forget all") return forgetAllMemory();
+
+    if (low.startsWith("task add ")) return addTask(val.slice(9));
+    if (low === "task list" || low === "tasks") return getTaskList();
+    if (low.startsWith("task done ")) {
+      const idx = parseInt(val.slice(10).trim(), 10) - 1;
+      return completeTask(idx);
+    }
+    if (low === "task clear" || low === "clear tasks") return clearTasks();
+
+    if (low.startsWith("check add ")) return addChecklistItem(val.slice(10));
+    if (low === "check list" || low === "checklist") return getChecklistSummary();
+    if (low.startsWith("check done ")) {
+      const idx = parseInt(val.slice(11).trim(), 10) - 1;
+      if (!Number.isFinite(idx)) return "USE: check done 1";
+      return completeChecklistItem(idx);
+    }
+    if (low === "check clear" || low === "clear checklist") return clearChecklist();
+
+    if (low === "flip coin") return flipCoin();
+
+    if (low === "roll die" || low === "roll dice") return rollDie(6);
+    if (low.startsWith("roll d")) {
+      const sides = parseInt(low.slice(6), 10);
+      return rollDie(sides);
+    }
+
+    if (low === "choose letter") return chooseLetter();
+    if (low.startsWith("choose letter ")) {
+      const parts = low.split(/\s+/);
+      if (parts.length === 4) return chooseLetterRange(parts[2], parts[3]);
+      return chooseLetter();
+    }
+
+    if (low.startsWith("choose number ")) {
+      const parts = low.split(/\s+/);
+      if (parts.length >= 4) {
+        const min = parseInt(parts[2], 10);
+        const max = parseInt(parts[3], 10);
+        return chooseNumberBetween(min, max);
+      }
+      return "USE: choose number 1 50";
+    }
+
+    if (low.startsWith("choose a number between ")) {
+      const match = low.match(/^choose a number between\s+(-?\d+)\s+and\s+(-?\d+)$/);
+      if (match) {
+        return chooseNumberBetween(parseInt(match[1], 10), parseInt(match[2], 10));
+      }
+      return "USE: choose a number between 1 and 50";
+    }
+
+    if (low === "stopwatch start") return startStopwatch();
+    if (low === "stopwatch stop") return stopStopwatch();
+    if (low === "stopwatch reset") return resetStopwatch();
+    if (low === "stopwatch status") return stopwatchStatus();
+
+    if (low === "countdown stop") return stopCountdown();
+    if (low === "countdown status") return countdownStatus();
+    if (low.startsWith("countdown ")) {
+      const seconds = parseCountdownInput(val.slice(10));
+      if (!Number.isFinite(seconds)) return "USE: countdown 5m OR countdown 300 OR countdown 05:00";
+      return startCountdown(seconds);
+    }
+
+    if (low === "alarm stop") return stopAlarm();
+    if (low === "alarm status") return getAlarmStatus();
+    if (low.startsWith("alarm ")) {
+      const alarmVal = val.slice(6).trim().toLowerCase();
+
+      const timeMatch = alarmVal.match(/^(\d{1,2}):(\d{2})$/);
+      if (timeMatch) return setAlarmAt(timeMatch[1], timeMatch[2]);
+
+      const seconds = parseCountdownInput(alarmVal);
+      if (Number.isFinite(seconds)) return setAlarmFromNow(seconds);
+
+      return "USE: alarm 5m OR alarm 07:30";
+    }
+
+    if (low === "reminders") return getRemindersSummary();
+    if (low === "clear reminders") return clearReminders();
+
+    if (low.startsWith("remind me in ")) {
+      const m = val.match(/^remind me in\s+(.+?)\s+(.+)$/i);
+      if (!m) return "USE: remind me in 15m take laundry out";
+      const seconds = parseCountdownInput(m[1]);
+      if (!Number.isFinite(seconds)) return "INVALID REMINDER TIME.";
+      return setReminderIn(seconds, m[2]);
+    }
+
+    if (low.startsWith("remind me at ")) {
+      const m = val.match(/^remind me at\s+(\d{1,2}):(\d{2})\s+(.+)$/i);
+      if (!m) return "USE: remind me at 19:30 call mom";
+      return setReminderAt(m[1], m[2], m[3]);
+    }
+
+    if (low === "flashlight on") return await flashlightOn();
+    if (low === "flashlight off") return await flashlightOff();
+
+    if (low === "minimal on") {
+      applyMinimalMode(true);
+      return "MINIMAL MODE ON.";
+    }
+
+    if (low === "minimal off") {
+      applyMinimalMode(false);
+      return "MINIMAL MODE OFF.";
+    }
+
+    if (/^[0-9+\-*/().\s×÷]+$/.test(val) && /[+\-*/×÷]/.test(val)) {
+      try {
+        return `RESULT: <b>${Function(`"use strict"; return (${val.replace(/×/g, "*").replace(/÷/g, "/")})`)()}</b>`;
+      } catch {
+        return "CALC ERROR.";
+      }
+    }
+
+    if (low.startsWith("calc ")) {
+      const expr = val.slice(5).trim().replace(/×/g, "*").replace(/÷/g, "/");
+      if (!/^[0-9+\-*/().\s]+$/.test(expr)) return "INVALID CALC INPUT.";
+      try {
+        return `RESULT: <b>${Function(`"use strict"; return (${expr})`)()}</b>`;
+      } catch {
+        return "CALC ERROR.";
+      }
+    }
+
+    return "OFFLINE MODE ACTIVE. USE 'capabilities' TO VIEW ONLINE/OFFLINE COMMANDS.";
+  }
+
+  function lockMode() {
+    authenticated = false;
+    sessionStorage.removeItem("ok_auth");
+
+    const i = document.getElementById("in");
+    const visor = document.getElementById("visor");
+    const menu = document.getElementById("menu");
+
+    if (activeRecognition) {
+      try { activeRecognition.stop(); } catch (e) { console.error(e); }
+    }
+
+    isListening = false;
+    activeRecognition = null;
+
+    stopTalking();
+    document.body.classList.remove("emergency-active");
+    stopSiren();
+
+    i.type = "password";
+    i.value = "";
+    i.placeholder = "System Lockdown...";
+
+    document.getElementById("sub-label").innerText = "LOCKED";
+    visor.innerHTML = "";
+    menu.style.display = "none";
+
+    if (document.fullscreenElement) {
+      document.exitFullscreen().catch(() => {});
+    }
+  }
+
+  window.onload = () => {
+    if (!getSessionData().boot) saveSessionData({ commands: 0, boot: Date.now() });
+
+    const savedAlarm = getAlarmData();
+    if (savedAlarm?.target && savedAlarm.target > Date.now()) {
+      alarmTimeout = setTimeout(triggerAlarm, savedAlarm.target - Date.now());
+    }
+
+    restoreReminders();
+    applyMinimalMode(minimalMode);
+
+    if (authenticated) unlockUI();
+    if (isOffline) document.body.classList.add("offline-active");
+
+    updateClock();
+    setInterval(updateClock, 1000);
+
+    fetchWeather();
+    if (weatherInterval) clearInterval(weatherInterval);
+    weatherInterval = setInterval(fetchWeather, 600000);
+  };
+
+  function unlockUI() {
+    const i = document.getElementById("in");
+    i.type = "text";
+    i.placeholder = "Query the Domain...";
+
+    if (isOffline) {
+      document.getElementById("sub-label").innerText = "UTILITY CORE";
+    } else {
+      const ok = ensureAIProviderReady();
+      document.getElementById("sub-label").innerText = ok
+        ? `${getProviderLabel(selectedProvider)} LINKED`
+        : "NO AI KEY";
+    }
+
+    loadSlot(1);
+
+    if (voiceMode && authenticated && !document.body.classList.contains("talking")) {
+      setTimeout(() => {
+        if (!isListening && voiceMode) listenAction(true);
+      }, 500);
+    }
+  }
+
+  function talk(txt) {
+    const cleaned = String(txt).replace(/<[^>]*>/g, "").trim();
+    if (!cleaned) return;
+
+    try {
+      window.speechSynthesis.cancel();
+    } catch (e) {
+      console.error(e);
+    }
+
+    document.body.classList.remove("talking");
+    stopInterruptListener();
+
+    const u = new SpeechSynthesisUtterance(cleaned);
+    u.pitch = 0.8;
+    u.rate = 1.1;
+
+    u.onstart = () => {
+      document.body.classList.add("talking");
+      startInterruptListener();
+    };
+
+    u.onend = () => {
+      document.body.classList.remove("talking");
+      stopInterruptListener();
+      scheduleVoiceRelisten();
+    };
+
+    u.onerror = (e) => {
+      console.error(e);
+      document.body.classList.remove("talking");
+      stopInterruptListener();
+      scheduleVoiceRelisten();
+    };
+
+    window.speechSynthesis.speak(u);
+  }
+
+  function offlineBlocked(featureName) {
+    return `${featureName.toUpperCase()} DISABLED IN OFFLINE MODE.`;
+  }
+
+  async function strike() {
+    const i = document.getElementById("in");
+    let val = i.value.trim();
+    if (!val) return;
+
+    if (!authenticated) {
+      if (val === "2644") {
+        authenticated = true;
+        sessionStorage.setItem("ok_auth", "true");
+        unlockUI();
+        talk("Bridge synced.");
+        playTone(600, "square", 0.2, 0.1);
+        i.value = "";
+        document.body.classList.remove("emergency-active");
+        stopSiren();
+      } else {
+        document.body.classList.add("emergency-active");
+        startSiren();
+        talk("Unauthorized.");
+        i.value = "";
+      }
+      return;
+    }
+
+    if (activeSlot === 11) {
+      renderSystemPanel();
+      i.value = "";
+      return;
+    }
+
+    addMsg(val, "user");
+    bumpSessionCommandCount();
+    i.value = "";
+    const low = val.toLowerCase();
+    let res = "";
+
+    if (low === "lock mode") {
+      addMsg("LOCK MODE ENGAGED.", "bot");
+      lockMode();
+      return;
+    }
+
+    if (["help", "emergency"].includes(low)) {
+      document.body.classList.add("emergency-active");
+      startSiren();
+      addMsg("<b>CRITICAL STATE ACTIVE.</b>", "bot");
+      return;
+    }
+
+    if (["clear", "stand down"].includes(low)) {
+      document.body.classList.remove("emergency-active");
+      stopSiren();
+      addMsg("Systems nominal.", "bot");
+      return;
+    }
+
+    if (low === "voice mode on") {
+      res = setVoiceMode(true);
+      addMsg(res, "bot");
+      talk(res);
+      return;
+    }
+
+    if (low === "voice mode off") {
+      res = setVoiceMode(false);
+      addMsg(res, "bot");
+      talk(res);
+      return;
+    }
+
+    if (low === "use groq" || low === "use openai" || low === "use gemini") {
+      selectedProvider = low.replace("use ", "").trim();
+      sessionStorage.setItem(PROVIDER_KEY, selectedProvider);
+
+      if (!getProviderKey(selectedProvider)) {
+        const enteredKey = prompt(`ENTER ${getProviderLabel(selectedProvider)} API KEY:`);
+        if (!enteredKey || !enteredKey.trim()) {
+          res = `${getProviderLabel(selectedProvider)} KEY NOT PROVIDED.`;
+          addMsg(res, "bot");
+          talk(res);
+          return;
+        }
+        setProviderKey(selectedProvider, enteredKey.trim());
+      }
+
+      document.getElementById("sub-label").innerText = `${getProviderLabel(selectedProvider)} LINKED`;
+      res = `AI PROVIDER SET: ${getProviderLabel(selectedProvider)}`;
+      addMsg(res, "bot");
+      talk(res);
+      return;
+    }
+
+    if (low === "provider" || low === "ai provider") {
+      res = selectedProvider
+        ? `ACTIVE PROVIDER: ${getProviderLabel(selectedProvider)}`
+        : "NO AI PROVIDER SELECTED.";
+      addMsg(res, "bot");
+      talk(res);
+      return;
+    }
+
+    if (low.startsWith("map ")) {
+      if (isOffline) {
+        res = offlineBlocked("map");
+      } else {
+        const q = encodeURIComponent(val.substring(4));
+        res = `<b>LOCATION:</b><br><iframe width="100%" height="250" style="border:1px solid var(--halo)" src="https://www.google.com/maps?q=${q}&output=embed" allowfullscreen></iframe>`;
+      }
+    }
+    else if (low.startsWith("route ")) {
+      if (isOffline) {
+        res = offlineBlocked("route");
+      } else {
+        const parts = val.substring(6).split(" to ");
+        if (parts.length === 2) {
+          const start = encodeURIComponent(parts[0].trim());
+          const end = encodeURIComponent(parts[1].trim());
+          res = `<b>ROUTE UPLINK:</b><br><iframe width="100%" height="300" style="border:1px solid var(--halo)" src="https://www.google.com/maps?saddr=${start}&daddr=${end}&output=embed" allowfullscreen></iframe>`;
+        } else {
+          res = "INVALID ROUTE PARAMS. USE: route [start] to [end]";
+        }
+      }
+    }
+    else if (low.startsWith("search ")) {
+      if (isOffline) {
+        res = offlineBlocked("search");
+      } else {
+        const query = val.substring(7);
+        res = `<b>INTEL UPLINK READY:</b><br>Target: ${query.toUpperCase()}<br><button class="uplink-btn" onclick="window.open('https://www.google.com/search?q=${encodeURIComponent(query)}', '_blank')">[ ACCESS GOOGLE DATABASE ]</button>`;
+      }
+    }
+    else if (low.startsWith("bible ")) {
+      if (isOffline) {
+        res = offlineBlocked("bible uplink");
+      } else {
+        try {
+          const r = await fetch(`https://bible-api.com/${encodeURIComponent(val.substring(6))}`);
+          const d = await r.json();
+          res = d.text ? `<b>${d.reference}</b><br>${d.text}` : "Missing.";
+        } catch {
+          res = "BIBLE UPLINK FAILED.";
+        }
+      }
+    }
+    else if (isOffline) {
+      res = await offlineCommand(val);
+    }
+    else if (/^[0-9+\-*/().\s×÷]+$/.test(val) && /[+\-*/×÷]/.test(val)) {
+      try {
+        res = `Result: <b>${Function(`"use strict"; return (${val.replace(/×/g, "*").replace(/÷/g, "/")})`)()}</b>`;
+      } catch {
+        res = "Error.";
+      }
+    }
+    else {
+      if (!ensureAIProviderReady()) {
+        res = "NO AI PROVIDER READY.";
+      } else {
+        document.getElementById("sub-label").innerText = `${getProviderLabel(selectedProvider)} LINKED`;
+        res = await askSelectedProvider();
+      }
+    }
+
+    addMsg(res, "bot");
+    talk(res);
+  }
+
+  function toggleSpectrum() {
+    isOffline = !isOffline;
+    localStorage.setItem("ok_offline", isOffline);
+    location.reload();
+  }
+
+  function addMsg(t, s, saveLog = true) {
+    const d = document.createElement("div");
+    d.className = `msg ${s}`;
+    const v = document.getElementById("visor");
+    v.appendChild(d);
+
+    const hasHTML = /<[^>]+>/.test(t);
+
+    if (s === "bot" && !hasHTML && !minimalMode) {
+      let idx = 0;
+      const safeText = String(t);
+      function type() {
+        if (idx < safeText.length) {
+          d.textContent = safeText.substring(0, idx + 1);
+          idx++;
+          v.scrollTop = v.scrollHeight;
+          setTimeout(type, 10);
+        }
+      }
+      type();
+    } else if (s === "bot" && !hasHTML) {
+      d.textContent = String(t);
+      v.scrollTop = v.scrollHeight;
+    } else {
+      d.innerHTML = t;
+      v.scrollTop = v.scrollHeight;
+    }
+
+    if (saveLog) {
+      db[activeSlot].logs.push({ t, s });
+      save();
+    }
+  }
+
+  function save() {
+    localStorage.setItem(DB_KEY, JSON.stringify(db));
+  }
+
+  function loadSlot(id) {
+    activeSlot = id;
+    document.getElementById("sub-label").innerText =
+      id === 11
+        ? "SYSTEM INFO"
+        : `ARCHIVE [ ${id} ]`;
+
+    document.getElementById("visor").innerHTML = '';
+
+    if (id === 11) {
+      renderSystemPanel();
+    } else {
+      db[activeSlot].logs.forEach(l => addMsg(l.t, l.s, false));
+    }
+
+    if (document.getElementById("menu").style.display === "block") toggleMenu();
+  }
+
+  function toggleMenu() {
+    if (!authenticated) {
+      document.body.classList.add("emergency-active");
+      startSiren();
+      return;
+    }
+
+    const m = document.getElementById("menu");
+    m.style.display = m.style.display === "block" ? "none" : "block";
+    if (m.style.display === "block") renderMenu();
+  }
+
+  function renderMenu() {
+    const list = document.getElementById("log-list");
+    list.innerHTML = "";
+
+    for (let i = 1; i <= 11; i++) {
+      const row = document.createElement("div");
+      row.className = "log-row";
+      row.innerHTML = `
+        <div class="log-id" onclick="loadSlot(${i})">${i}</div>
+        <div class="log-name" ${i === 11 ? "" : 'contenteditable="true"'} onblur="rename(${i}, this.innerText)">${db[i].name}</div>
+        ${i !== 11 ? `<button class="wipe-btn" onclick="wipe(${i})">WIPE</button>` : ""}
+      `;
+      list.appendChild(row);
+    }
+  }
+
+  function rename(id, n) {
+    if (id === 11) return;
+    db[id].name = n;
+    save();
+  }
+
+  function wipe(id) {
+    if (id === 11 || !confirm("Purge?")) return;
+    db[id].logs = [];
+    save();
+    renderMenu();
+    loadSlot(id);
+  }
+
+  function toggleFullscreen() {
+    if (!authenticated) return;
+    if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+    else document.exitFullscreen();
+  }
+
+  function startMic() {
+    if (!authenticated) return;
+    listenAction(false);
+  }
+
+  function listenAction(isAutoRestart = false) {
+    const Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!Rec) {
+      if (!isAutoRestart) addMsg("MIC/SPEECH RECOGNITION UNAVAILABLE.", "bot");
+      return;
+    }
+
+    if (isListening) return;
+    if (document.body.classList.contains("talking")) return;
+
+    const r = new Rec();
+    activeRecognition = r;
+    r.lang = navigator.language || "en-US";
+    r.interimResults = false;
+    r.maxAlternatives = 1;
+    r.continuous = false;
+
+    r.onstart = () => {
+      isListening = true;
+      document.getElementById("in").placeholder = voiceMode ? "VOICE MODE ACTIVE..." : "LISTENING...";
+      if (!isAutoRestart) playTone(1000, "sine", 0.15);
+    };
+
+    r.onresult = (e) => {
+      const heard = e.results?.[0]?.[0]?.transcript?.trim();
+      if (!heard) return;
+      document.getElementById("in").value = heard;
+      strike();
+    };
+
+    r.onerror = (e) => {
+      console.error(e);
+      const harmless =
+        e.error === "aborted" ||
+        e.error === "no-speech" ||
+        e.error === "network";
+
+      if (!isAutoRestart && !harmless) {
+        addMsg(`VOICE INPUT FAILED: ${e.error || "UNKNOWN ERROR"}`, "bot");
+      }
+    };
+
+    r.onend = () => {
+      isListening = false;
+      activeRecognition = null;
+      document.getElementById("in").placeholder = "Query the Domain...";
+      if (voiceMode && authenticated && !document.body.classList.contains("talking")) {
+        setTimeout(() => {
+          if (!isListening && voiceMode) listenAction(true);
+        }, 650);
+      }
+    };
+
+    try {
+      r.start();
+    } catch (e) {
+      console.error(e);
+      isListening = false;
+      activeRecognition = null;
+      if (!isAutoRestart) addMsg("VOICE INPUT FAILED TO START.", "bot");
+    }
+  }
+</script>
+</body>
+</html>
