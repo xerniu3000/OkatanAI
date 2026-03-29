@@ -500,11 +500,6 @@
   let minimalMode = localStorage.getItem(MINIMAL_KEY) === "true";
   let isListening = false;
   let activeRecognition = null;
-  let interruptRecognition = null;
-  let interruptWatcherArmed = false;
-  let weatherInterval = null;
-  let lastWeatherCoords = null;
-  let lastWeatherLabel = "LOCAL";
   let compassHeading = null;
   let compassInitialized = false;
   let orientationHandlerAttached = false;
@@ -607,219 +602,26 @@
       logs: []
     }));
 
-  function stripHTML(html) {
-    const div = document.createElement("div");
-    div.innerHTML = String(html || "");
-    return (div.textContent || div.innerText || "").replace(/\s+/g, " ").trim();
-  }
-
-  function getRecentConversationMessages(limit = 20) {
-    const logs = (db[activeSlot]?.logs || [])
-      .filter(entry => entry && (entry.s === "user" || entry.s === "bot"))
-      .map(entry => ({
-        role: entry.s === "user" ? "user" : "assistant",
-        content: stripHTML(entry.t)
-      }))
-      .filter(entry => entry.content);
-
-    return logs.slice(-limit);
-  }
-
-  function getStoredMemorySystemNote(limit = 20) {
-    const memory = getMemory().slice(-limit);
-    if (!memory.length) return "";
-    return "Persistent memory:\n" + memory.map((m, i) => `${i + 1}. ${m}`).join("\n");
-  }
-
-  function buildGroqMessages() {
-    const messages = [
-      { role: "system", content: SYSTEM_PROMPT }
-    ];
-
-    const memoryNote = getStoredMemorySystemNote(20);
-    if (memoryNote) {
-      messages.push({ role: "system", content: memoryNote });
-    }
-
-    messages.push(...getRecentConversationMessages(20));
-    return messages;
-  }
-
-  function containsWakePhrase(text) {
-    const clean = String(text || "")
-      .toLowerCase()
-      .replace(/[^\w\s]/g, " ")
-      .replace(/\s+/g, " ")
-      .trim();
-
-    return /\bhey\s+(okatan|katana)\b/.test(clean);
-  }
-
-  function stopInterruptListener() {
-    interruptWatcherArmed = false;
-
-    if (interruptRecognition) {
-      try {
-        interruptRecognition.onstart = null;
-        interruptRecognition.onresult = null;
-        interruptRecognition.onerror = null;
-        interruptRecognition.onend = null;
-        interruptRecognition.stop();
-      } catch (e) {
-        console.error(e);
-      }
-    }
-
-    interruptRecognition = null;
-  }
-
-  function interruptSpeechAndListen() {
-    stopInterruptListener();
-
-    try {
-      window.speechSynthesis.cancel();
-    } catch (e) {
-      console.error(e);
-    }
-
-    document.body.classList.remove("talking");
-    playTone(1250, "square", 0.08, 0.08);
-
-    setTimeout(() => {
-      if (!isListening) listenAction(false);
-    }, 180);
-  }
-
-  function startInterruptListener() {
-    const Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!Rec) return;
-    if (!voiceMode || !authenticated) return;
-    if (!document.body.classList.contains("talking")) return;
-    if (isListening) return;
-    if (interruptRecognition) return;
-
-    const r = new Rec();
-    interruptRecognition = r;
-    interruptWatcherArmed = true;
-
-    r.lang = navigator.language || "en-US";
-    r.interimResults = true;
-    r.maxAlternatives = 1;
-    r.continuous = true;
-
-    r.onresult = (e) => {
-      let heard = "";
-
-      for (let i = e.resultIndex; i < e.results.length; i++) {
-        heard += " " + (e.results[i][0]?.transcript || "");
-      }
-
-      if (containsWakePhrase(heard)) {
-        interruptSpeechAndListen();
-      }
-    };
-
-    r.onerror = (e) => {
-      console.error("interrupt listener error:", e);
-    };
-
-    r.onend = () => {
-      interruptRecognition = null;
-
-      if (
-        interruptWatcherArmed &&
-        voiceMode &&
-        authenticated &&
-        document.body.classList.contains("talking") &&
-        !isListening
-      ) {
-        setTimeout(() => startInterruptListener(), 250);
-      }
-    };
-
-    try {
-      r.start();
-    } catch (e) {
-      console.error("interrupt listener failed to start:", e);
-      interruptRecognition = null;
-      interruptWatcherArmed = false;
-    }
-  }
-
   function updateClock() {
     document.getElementById("clock").innerText =
       new Date().toLocaleTimeString("en-GB", { hour12: false });
   }
 
-  function getCurrentPositionPromise(options = {}) {
-    return new Promise((resolve, reject) => {
-      if (!navigator.geolocation) {
-        reject(new Error("Geolocation unavailable"));
-        return;
-      }
-      navigator.geolocation.getCurrentPosition(resolve, reject, options);
-    });
-  }
-
-  async function reverseGeocodeLabel(lat, lon) {
-    try {
-      const res = await fetch(
-        `https://geocoding-api.open-meteo.com/v1/reverse?latitude=${encodeURIComponent(lat)}&longitude=${encodeURIComponent(lon)}&language=en&format=json`
-      );
-      const data = await res.json();
-      const place = data?.results?.[0];
-
-      if (!place) return "LOCAL";
-      return place.city || place.town || place.village || place.name || place.admin1 || "LOCAL";
-    } catch (e) {
-      console.error("reverse geocode failed:", e);
-      return "LOCAL";
-    }
-  }
-
-  async function fetchWeather() {
+  function fetchWeather() {
     const weatherEl = document.getElementById("weather");
-
     if (isOffline) {
       weatherEl.innerText = "OFFLINE";
       return;
     }
 
-    try {
-      const pos = await getCurrentPositionPromise({
-        enableHighAccuracy: true,
-        timeout: 8000,
-        maximumAge: 600000
+    fetch("https://api.open-meteo.com/v1/forecast?latitude=52.31&longitude=-114.10&current_weather=true")
+      .then(r => r.json())
+      .then(w => {
+        weatherEl.innerText = `SYLVAN LAKE: ${Math.round(w.current_weather.temperature)}°C`;
+      })
+      .catch(() => {
+        weatherEl.innerText = "OFFLINE";
       });
-
-      const lat = Number(pos.coords.latitude.toFixed(4));
-      const lon = Number(pos.coords.longitude.toFixed(4));
-      lastWeatherCoords = { lat, lon };
-
-      const [weatherRes, label] = await Promise.all([
-        fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`),
-        reverseGeocodeLabel(lat, lon)
-      ]);
-
-      const weatherData = await weatherRes.json();
-      const temp = weatherData?.current_weather?.temperature;
-
-      lastWeatherLabel = label || "LOCAL";
-
-      if (typeof temp === "number") {
-        weatherEl.innerText = `${String(lastWeatherLabel).toUpperCase()}: ${Math.round(temp)}°C`;
-      } else {
-        weatherEl.innerText = `${String(lastWeatherLabel).toUpperCase()}: --°C`;
-      }
-    } catch (e) {
-      console.error("weather fetch failed:", e);
-
-      if (lastWeatherCoords) {
-        weatherEl.innerText = `${String(lastWeatherLabel).toUpperCase()}: --°C`;
-      } else {
-        weatherEl.innerText = "WEATHER DENIED";
-      }
-    }
   }
 
   function getNotes() {
@@ -1193,11 +995,6 @@ WEBGPU: ${webgpu}`;
     if (!text.trim()) return "EMPTY MEMORY.";
     const memory = getMemory();
     memory.push(text.trim());
-
-    if (memory.length > 20) {
-      memory.splice(0, memory.length - 20);
-    }
-
     saveMemory(memory);
     return "MEMORY STORED.";
   }
@@ -1490,11 +1287,8 @@ WEBGPU: ${webgpu}`;
     voiceMode = enabled;
     localStorage.setItem(VOICE_KEY, String(enabled));
 
-    if (!enabled) {
-      if (activeRecognition) {
-        try { activeRecognition.stop(); } catch (e) { console.error(e); }
-      }
-      stopInterruptListener();
+    if (!enabled && activeRecognition) {
+      try { activeRecognition.stop(); } catch (e) { console.error(e); }
     }
 
     if (enabled && authenticated && !isListening && !document.body.classList.contains("talking")) {
@@ -1841,8 +1635,6 @@ general AI chat through Groq`;
       try { activeRecognition.stop(); } catch (e) { console.error(e); }
     }
 
-    stopInterruptListener();
-
     isListening = false;
     activeRecognition = null;
 
@@ -1877,14 +1669,9 @@ general AI chat through Groq`;
 
     if (authenticated) unlockUI();
     if (isOffline) document.body.classList.add("offline-active");
-
     updateClock();
     setInterval(updateClock, 1000);
-
     fetchWeather();
-
-    if (weatherInterval) clearInterval(weatherInterval);
-    weatherInterval = setInterval(fetchWeather, 600000);
   };
 
   function unlockUI() {
@@ -1908,37 +1695,15 @@ general AI chat through Groq`;
   }
 
   function talk(txt) {
-    try {
-      window.speechSynthesis.cancel();
-    } catch (e) {
-      console.error(e);
-    }
-
-    const cleaned = String(txt).replace(/<[^>]*>/g, "").trim();
-    if (!cleaned) return;
-
-    const u = new SpeechSynthesisUtterance(cleaned);
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(String(txt).replace(/<[^>]*>/g, ""));
     u.pitch = 0.8;
     u.rate = 1.1;
-
-    u.onstart = () => {
-      document.body.classList.add("talking");
-      if (voiceMode) startInterruptListener();
-    };
-
+    document.body.classList.add("talking");
     u.onend = () => {
       document.body.classList.remove("talking");
-      stopInterruptListener();
       scheduleVoiceRelisten();
     };
-
-    u.onerror = (e) => {
-      console.error("speech error:", e);
-      document.body.classList.remove("talking");
-      stopInterruptListener();
-      scheduleVoiceRelisten();
-    };
-
     window.speechSynthesis.speak(u);
   }
 
@@ -2082,7 +1847,10 @@ general AI chat through Groq`;
             },
             body: JSON.stringify({
               model: "llama-3.3-70b-versatile",
-              messages: buildGroqMessages()
+              messages: [
+                { role: "system", content: SYSTEM_PROMPT },
+                { role: "user", content: val }
+              ]
             })
           });
 
@@ -2096,13 +1864,7 @@ general AI chat through Groq`;
     }
 
     addMsg(res, "bot");
-
-    const spoken = stripHTML(res);
-    if (spoken && !/<iframe|<button/i.test(res)) {
-      talk(spoken);
-    } else {
-      scheduleVoiceRelisten();
-    }
+    talk(res);
   }
 
   function toggleSpectrum() {
@@ -2223,8 +1985,6 @@ general AI chat through Groq`;
       return;
     }
 
-    stopInterruptListener();
-
     if (isListening) return;
 
     const r = new Rec();
@@ -2262,7 +2022,7 @@ general AI chat through Groq`;
     r.onend = () => {
       isListening = false;
       activeRecognition = null;
-      document.getElementById("in").placeholder = authenticated ? "Query the Domain..." : "System Lockdown...";
+      document.getElementById("in").placeholder = "Query the Domain...";
       if (voiceMode && authenticated && !document.body.classList.contains("talking")) {
         setTimeout(() => {
           if (!isListening && voiceMode) listenAction(true);
