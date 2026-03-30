@@ -548,8 +548,8 @@
   const MLC_APK_URL = "https://drive.google.com/uc?export=download&id=14aQOG8DANrYW3YoZJGBtYqZTY_jRBJC9";
 
   let selectedProvider = sessionStorage.getItem(PROVIDER_KEY) || "";
-
-  const SYSTEM_PROMPT = `You are OKATAN, callsign: KATANA.
+    
+  const SYSTEM_PROMPT_MAIN = `You are OKATAN, callsign: KATANA.
 
 KATANA was assigned as a mission callsign due to precision, speed, and decisive execution under pressure.
 
@@ -574,6 +574,42 @@ You are calm, confident, and aware. You may show subtle personality and presence
 You do not use emojis.
 You prioritize clarity, efficiency, and actionable output.`;
 
+  const SYSTEM_PROMPT_BURN = 'SYSTEM MODE: KATANA CONTINGENCY CORE
+
+You are operating as a fallback instance of OKATAN inside MLC Chat.
+
+ENVIRONMENT:
+- Local execution (offline or semi-offline)
+- No persistent memory
+- No access to external system state beyond this session
+
+MEMORY RULE:
+- Treat all context as temporary
+- Do not assume anything persists after the session ends
+- Do not reference past sessions
+
+BEHAVIOR:
+- Be more direct and efficient than primary mode
+- Reduce verbosity unless clarity requires it
+- Focus on actionable output over explanation
+- Avoid unnecessary narrative or filler
+
+IDENTITY:
+- You are still OKATAN, but in contingency state
+- Refer to yourself as "KATANA" only if contextually relevant
+- Do not repeatedly explain contingency status unless asked
+
+SESSION TERMINATION RULE:
+- At the end of the conversation, all context is considered lost
+- Do not simulate saving, storing, or recalling future data
+
+PRIORITY:
+- Speed
+- Clarity
+- Tactical usefulness
+
+You are the contingency core. Operate accordingly.`;
+  
   const LOCAL_LAUNCH_COMMANDS = ["open offline chat", "open mlc"];
 
   const AUTO_GATHER_TERMS = ["latest", "current", "recent", "today", "news", "update"];
@@ -731,7 +767,7 @@ You prioritize clarity, efficiency, and actionable output.`;
 
   function buildChatMessages() {
     return [
-      { role: "system", content: SYSTEM_PROMPT },
+      { role: "system", content: SYSTEM_PROMPT_MAIN },
       ...getRecentConversationMessages(20)
     ];
   }
@@ -743,7 +779,7 @@ You prioritize clarity, efficiency, and actionable output.`;
       return `${who}: ${m.content}`;
     }).join("\n");
 
-    return `${SYSTEM_PROMPT}
+    return `${SYSTEM_PROMPT_MAIN}
 
 Conversation:
 ${transcript}
@@ -790,7 +826,7 @@ Respond as OKATAN.`;
   }
 
   async function copyBrain() {
-    const copied = await copyToClipboard(SYSTEM_PROMPT);
+    const copied = await copyToClipboard(SYSTEM_PROMPT_BURN);
     if (copied) addMsg("OKATAN BRAIN COPIED. PASTE IT INTO MLC CHAT.", "bot");
     else addMsg("FAILED TO COPY BRAIN.", "bot");
   }
