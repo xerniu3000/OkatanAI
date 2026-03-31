@@ -3304,29 +3304,57 @@ clear api all`;
   }
 
   function talk(txt) {
-    const cleaned = String(txt).replace(/<[^>]*>/g, "").trim();
-    if (!cleaned) return;
+  function talk(txt) {
+  const cleaned = String(txt)
+    .replace(/<[^>]*>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 
-    let spoken = cleaned;
-    if (spoken.length > 280) {
-      const split = spoken.match(/.*?[.!?](\s|$)/g);
-      if (split && split.length) {
-        spoken = split.slice(0, 2).join(" ").trim();
-      } else {
-        spoken = spoken.slice(0, 280).trim();
-      }
+  if (!cleaned) return;
+
+  try {
+    window.speechSynthesis.cancel();
+  } catch (e) {
+    console.error(e);
+  }
+
+  document.body.classList.remove("talking");
+  stopInterruptListener();
+
+  const sentenceChunks = cleaned.match(/[^.!?]+[.!?]+|[^.!?]+$/g) || [cleaned];
+  const chunks = [];
+
+  sentenceChunks.forEach(sentence => {
+    const s = sentence.trim();
+    if (!s) return;
+
+    if (s.length <= 180) {
+      chunks.push(s);
+    } else {
+      const parts = s.match(/.{1,180}(\s|$)/g) || [s];
+      parts.forEach(part => {
+        const p = part.trim();
+        if (p) chunks.push(p);
+      });
     }
+  });
 
-    try {
-      window.speechSynthesis.cancel();
-    } catch (e) {
-      console.error(e);
-    }
+  let index = 0;
 
+  function finishTalking() {
     document.body.classList.remove("talking");
     stopInterruptListener();
+    scheduleVoiceRelisten();
+  }
 
-    const u = new SpeechSynthesisUtterance(spoken);
+  function speakNext() {
+    if (index >= chunks.length) {
+      finishTalking();
+      return;
+    }
+
+    const part = chunks[index++];
+    const u = new SpeechSynthesisUtterance(part);
     u.pitch = 0.8;
     u.rate = 1.1;
 
@@ -3336,20 +3364,19 @@ clear api all`;
     };
 
     u.onend = () => {
-      document.body.classList.remove("talking");
-      stopInterruptListener();
-      scheduleVoiceRelisten();
+      setTimeout(speakNext, 60);
     };
 
     u.onerror = (e) => {
-      console.error(e);
-      document.body.classList.remove("talking");
-      stopInterruptListener();
-      scheduleVoiceRelisten();
+      console.error("Speech error:", e);
+      setTimeout(speakNext, 60);
     };
 
     window.speechSynthesis.speak(u);
   }
+
+  speakNext();
+}
 
   function offlineBlocked(featureName) {
     if (String(featureName).toLowerCase() === "gather") {
