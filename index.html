@@ -2586,76 +2586,75 @@ PROVIDERS:<br>${getProviderMatrixHTML()}`;
 }
 
   function startInterruptListener() {
-    const Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!Rec) return;
-    if (!document.body.classList.contains("talking")) return;
+  const Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!Rec) return;
+  if (!document.body.classList.contains("talking")) return;
 
-    stopInterruptListener();
+  stopInterruptListener();
 
-    const r = new Rec();
-    interruptRecognition = r;
-    r.lang = navigator.language || "en-US";
-    r.interimResults = false;
-    r.maxAlternatives = 3;
-    r.continuous = true;
+  const r = new Rec();
+  interruptRecognition = r;
+  r.lang = navigator.language || "en-US";
+  r.interimResults = true;
+  r.maxAlternatives = 3;
+  r.continuous = true;
 
-    r.onstart = () => {
-      interruptListening = true;
-    };
+  r.onstart = () => {
+    interruptListening = true;
+  };
 
-    r.onresult = (e) => {
-      const results = e.results || [];
-      for (let i = e.resultIndex || 0; i < results.length; i++) {
-        const transcript = results[i]?.[0]?.transcript?.trim();
-        if (!transcript) continue;
+  r.onresult = (e) => {
+    const results = e.results || [];
+    for (let i = e.resultIndex || 0; i < results.length; i++) {
+      const transcript = results[i]?.[0]?.transcript?.trim();
+      if (!transcript) continue;
 
-        if (isInterruptCommand(transcript)) {
-          stopTalking();
-          scheduleVoiceRelisten();
-          return;
-        }
+      if (isInterruptCommand(transcript)) {
+        forceStopTalking();
+        scheduleVoiceRelisten();
+        return;
       }
-    };
+    }
+  };
 
-    r.onerror = (e) => {
-      console.error(e);
-      interruptListening = false;
+  r.onerror = (e) => {
+    console.error(e);
+    interruptListening = false;
 
-      const harmless =
-        e?.error === "aborted" ||
-        e?.error === "no-speech" ||
-        e?.error === "network";
+    const harmless =
+      e?.error === "aborted" ||
+      e?.error === "no-speech" ||
+      e?.error === "network";
 
-      if (!harmless) {
-        stopInterruptListener();
-      }
-    };
-
-    r.onend = () => {
-      interruptListening = false;
-
-      if (interruptRecognition !== r) return;
-
-      if (document.body.classList.contains("talking")) {
-        try {
-          r.start();
-        } catch (e) {
-          console.error(e);
-          stopInterruptListener();
-        }
-      } else {
-        stopInterruptListener();
-      }
-    };
-
-    try {
-      r.start();
-    } catch (e) {
-      console.error(e);
+    if (!harmless) {
       stopInterruptListener();
     }
-  }
+  };
 
+  r.onend = () => {
+    interruptListening = false;
+
+    if (interruptRecognition !== r) return;
+
+    if (document.body.classList.contains("talking")) {
+      try {
+        r.start();
+      } catch (e) {
+        console.error(e);
+        stopInterruptListener();
+      }
+    } else {
+      stopInterruptListener();
+    }
+  };
+
+  try {
+    r.start();
+  } catch (e) {
+    console.error(e);
+    stopInterruptListener();
+  }
+}
   function applyMinimalMode(enabled) {
     minimalMode = enabled;
     localStorage.setItem(MINIMAL_KEY, String(enabled));
