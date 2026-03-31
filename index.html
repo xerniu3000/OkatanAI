@@ -3258,6 +3258,8 @@ clear api all`;
   }
 
   window.onload = () => {
+    setupMicButton();
+    
     if (!getSessionData().boot) saveSessionData({ commands: 0, boot: Date.now() });
 
     const savedAlarm = getAlarmData();
