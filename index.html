@@ -2545,13 +2545,17 @@ PROVIDERS:<br>${getProviderMatrixHTML()}`;
   }
 
   function isInterruptCommand(text) {
-    const heard = normalizeInterruptPhrase(text);
-    return (
-      heard === "stop" ||
-      heard === "hey okatan stop" ||
-      heard === "hey katana stop"
-    );
-  }
+  const heard = normalizeInterruptPhrase(text);
+  return (
+    heard.includes("stop") ||
+    heard.includes("stop talking") ||
+    heard.includes("be quiet") ||
+    heard.includes("okatan stop") ||
+    heard.includes("katana stop") ||
+    heard.includes("hey okatan stop") ||
+    heard.includes("hey katana stop")
+  );
+}
 
   function stopInterruptListener() {
     const oldRecognition = interruptRecognition;
