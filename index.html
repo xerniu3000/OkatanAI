@@ -448,7 +448,7 @@
 
 <footer>
   <button class="mic-btn" id="mic-trigger">
-    <span class="mic-dot"></span><span class="mic-dot"></span><span class="mic-dot"></span>
+  <span class="mic-dot"></span><span class="mic-dot"></span><span class="mic-dot"></span>
   </button>
   <input id="in" placeholder="System Lockdown..." type="password" onkeydown="if(event.key==='Enter') strike();">
   <button class="strike-btn" onclick="strike()">STRIKE</button>
@@ -532,16 +532,6 @@
   let sirenInterval = null;
   let weatherInterval = null;
   const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-
-  async function resumeAudio() {
-    try {
-      if (audioCtx && audioCtx.state === "suspended") {
-        await audioCtx.resume();
-      }
-    } catch (e) {
-      console.error(e);
-    }
-  }
 
   const DB_KEY = "okatan_v8300_db";
   const NOTES_KEY = "okatan_notes_v1";
@@ -679,12 +669,6 @@ You are the contingency core. Operate accordingly.`;
   let activeRecognition = null;
   let interruptRecognition = null;
   let interruptListening = false;
-
-  let speechQueue = [];
-  let speakingNow = false;
-  let speechStopRequested = false;
-  let currentUtterance = null;
-
   let compassHeading = null;
   let compassInitialized = false;
   let orientationHandlerAttached = false;
@@ -2583,11 +2567,6 @@ PROVIDERS:<br>${getProviderMatrixHTML()}`;
   }
 
   function stopTalking() {
-    speechStopRequested = true;
-    speechQueue = [];
-    speakingNow = false;
-    currentUtterance = null;
-
     try {
       window.speechSynthesis.cancel();
     } catch (e) {
@@ -3280,7 +3259,7 @@ clear api all`;
 
   window.onload = () => {
     setupMicButton();
-
+    
     if (!getSessionData().boot) saveSessionData({ commands: 0, boot: Date.now() });
 
     const savedAlarm = getAlarmData();
@@ -3326,125 +3305,19 @@ clear api all`;
     }
   }
 
-  function splitSpeechChunks(text, maxLen = 180) {
-    const cleaned = String(text || "")
-      .replace(/<[^>]*>/g, " ")
-      .replace(/\s+/g, " ")
-      .trim();
-
-    if (!cleaned) return [];
-
-    const sentences = cleaned.match(/[^.!?]+[.!?]*|.+$/g) || [cleaned];
-    const chunks = [];
-    let buffer = "";
-
-    for (const sentence of sentences) {
-      const s = sentence.trim();
-      if (!s) continue;
-
-      if ((buffer + " " + s).trim().length <= maxLen) {
-        buffer = (buffer + " " + s).trim();
-      } else {
-        if (buffer) chunks.push(buffer);
-
-        if (s.length <= maxLen) {
-          buffer = s;
-        } else {
-          const words = s.split(" ");
-          let sub = "";
-
-          for (const word of words) {
-            if ((sub + " " + word).trim().length <= maxLen) {
-              sub = (sub + " " + word).trim();
-            } else {
-              if (sub) chunks.push(sub);
-              sub = word;
-            }
-          }
-
-          buffer = sub;
-        }
-      }
-    }
-
-    if (buffer) chunks.push(buffer);
-    return chunks;
-  }
-
-  function speakNextChunk() {
-    if (speechStopRequested) {
-      speakingNow = false;
-      currentUtterance = null;
-      document.body.classList.remove("talking");
-      stopInterruptListener();
-      scheduleVoiceRelisten();
-      return;
-    }
-
-    if (!speechQueue.length) {
-      speakingNow = false;
-      currentUtterance = null;
-      document.body.classList.remove("talking");
-      stopInterruptListener();
-      scheduleVoiceRelisten();
-      return;
-    }
-
-    const chunk = speechQueue.shift();
-    const utter = new SpeechSynthesisUtterance(chunk);
-    currentUtterance = utter;
-
-    utter.pitch = 0.8;
-    utter.rate = 1.0;
-
-    utter.onstart = () => {
-      document.body.classList.add("talking");
-
-      const ua = navigator.userAgent.toLowerCase();
-      const isAndroidChrome = ua.includes("android") && ua.includes("chrome");
-
-      if (!isAndroidChrome) {
-        startInterruptListener();
-      }
-    };
-
-    utter.onend = () => {
-      currentUtterance = null;
-      setTimeout(() => {
-        speakNextChunk();
-      }, 60);
-    };
-
-    utter.onerror = (e) => {
-      console.error(e);
-      currentUtterance = null;
-      setTimeout(() => {
-        speakNextChunk();
-      }, 60);
-    };
-
-    try {
-      window.speechSynthesis.speak(utter);
-    } catch (e) {
-      console.error(e);
-      speakingNow = false;
-      currentUtterance = null;
-      document.body.classList.remove("talking");
-      stopInterruptListener();
-      scheduleVoiceRelisten();
-    }
-  }
-
   function talk(txt) {
-    const cleaned = String(txt || "")
-      .replace(/<[^>]*>/g, " ")
-      .replace(/\s+/g, " ")
-      .trim();
-
+    const cleaned = String(txt).replace(/<[^>]*>/g, "").trim();
     if (!cleaned) return;
 
-    speechStopRequested = false;
-    speechQueue = splitSpeechChunks(cleaned, 180);
+    let spoken = cleaned;
+    if (spoken.length > 28000) {
+      const split = spoken.match(/.*?[.!?](\s|$)/g);
+      if (split && split.length) {
+        spoken = split.slice(0, 200).join(" ").trim();
+      } else {
+        spoken = spoken.slice(0, 28000).trim();
+      }
+    }
 
     try {
       window.speechSynthesis.cancel();
@@ -3455,8 +3328,29 @@ clear api all`;
     document.body.classList.remove("talking");
     stopInterruptListener();
 
-    speakingNow = true;
-    speakNextChunk();
+    const u = new SpeechSynthesisUtterance(spoken);
+    u.pitch = 0.8;
+    u.rate = 1.1;
+
+    u.onstart = () => {
+      document.body.classList.add("talking");
+      startInterruptListener();
+    };
+
+    u.onend = () => {
+      document.body.classList.remove("talking");
+      stopInterruptListener();
+      scheduleVoiceRelisten();
+    };
+
+    u.onerror = (e) => {
+      console.error(e);
+      document.body.classList.remove("talking");
+      stopInterruptListener();
+      scheduleVoiceRelisten();
+    };
+
+    window.speechSynthesis.speak(u);
   }
 
   function offlineBlocked(featureName) {
@@ -3467,13 +3361,9 @@ clear api all`;
   }
 
   async function strike() {
-    await resumeAudio();
-
     const i = document.getElementById("in");
     let val = i.value.trim();
     if (!val) return;
-
-    stopTalking();
 
     if (!authenticated) {
       if (val === "2644") {
@@ -3977,46 +3867,44 @@ clear api all`;
     if (!document.fullscreenElement) document.documentElement.requestFullscreen();
     else document.exitFullscreen();
   }
+const micTrigger = document.getElementById("mic-trigger");
 
-  const micTrigger = document.getElementById("mic-trigger");
+let micPressTimer = null;
+let micLongPressFired = false;
 
-  let micPressTimer = null;
-  let micLongPressFired = false;
+function setupMicButton() {
+  if (!micTrigger) return;
 
-  function setupMicButton() {
-    if (!micTrigger) return;
+  const startPress = () => {
+    micLongPressFired = false;
 
-    const startPress = () => {
-      micLongPressFired = false;
+    micPressTimer = setTimeout(() => {
+      micLongPressFired = true;
+      stopTalking();
+      addMsg("VOICE OUTPUT HALTED.", "bot");
+    }, 500);
+  };
 
-      micPressTimer = setTimeout(() => {
-        micLongPressFired = true;
-        stopTalking();
-        addMsg("VOICE OUTPUT HALTED.", "bot");
-      }, 500);
-    };
+  const endPress = () => {
+    clearTimeout(micPressTimer);
+  };
 
-    const endPress = () => {
-      clearTimeout(micPressTimer);
-    };
+  micTrigger.addEventListener("mousedown", startPress);
+  micTrigger.addEventListener("touchstart", startPress, { passive: true });
 
-    micTrigger.addEventListener("mousedown", startPress);
-    micTrigger.addEventListener("touchstart", startPress, { passive: true });
+  micTrigger.addEventListener("mouseup", endPress);
+  micTrigger.addEventListener("mouseleave", endPress);
+  micTrigger.addEventListener("touchend", endPress);
+  micTrigger.addEventListener("touchcancel", endPress);
 
-    micTrigger.addEventListener("mouseup", endPress);
-    micTrigger.addEventListener("mouseleave", endPress);
-    micTrigger.addEventListener("touchend", endPress);
-    micTrigger.addEventListener("touchcancel", endPress);
-
-    micTrigger.addEventListener("click", () => {
-      if (micLongPressFired) return;
-      startMic();
-    });
-  }
-
+  micTrigger.addEventListener("click", () => {
+    if (micLongPressFired) return;
+    startMic();
+  });
+}
+  
   function startMic() {
     if (!authenticated) return;
-    resumeAudio();
     listenAction(false);
   }
 
@@ -4084,4 +3972,4 @@ clear api all`;
   }
 </script>
 </body>
-</html>
+  </html>
