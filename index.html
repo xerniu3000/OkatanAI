@@ -2563,6 +2563,8 @@ PROVIDERS:<br>${getProviderMatrixHTML()}`;
     const heard = normalizeInterruptPhrase(text);
     return (
       heard === "stop" ||
+      heard === "halt" ||
+      heard === "stand fast" ||
       heard === "hey katana stop" ||
       heard === "hey okatan stop"
     );
