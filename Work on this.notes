@@ -3121,6 +3121,42 @@ PROVIDERS:<br>${getProviderMatrixHTML()}`;
     setMediaStatus("MEDIA BAY READY");
   }
 
+  function renderMediaFrame(videoId, title, mode) {
+  openMediaShell();
+  const scroll = document.getElementById("media-scroll");
+  if (!scroll) return;
+
+  const embedUrl = buildYoutubeEmbedUrl(videoId, true);
+
+  mediaState.videoId = videoId;
+  mediaState.title = title || "UNTITLED";
+  mediaState.mode = mode || "video";
+  mediaState.url = embedUrl;
+
+  scroll.innerHTML = `
+    <div class="media-card">
+      <b>${escapeAttr(mediaState.title)}</b><br>
+      MODE: ${(mediaState.mode || "video").toUpperCase()}
+    </div>
+
+    <div class="media-frame-wrap">
+      <iframe
+        class="media-frame"
+        src="${embedUrl}"
+        allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+        allowfullscreen
+        referrerpolicy="strict-origin-when-cross-origin"
+      ></iframe>
+    </div>
+
+    <div class="media-card">
+      USE: stop media, close media, exit media, youtube history.
+    </div>
+  `;
+
+  setMediaStatus(`MEDIA ACTIVE: ${mediaState.title}`);
+}
+
   function renderMediaResults(results, mode) {
     openMediaShell();
     const scroll = document.getElementById("media-scroll");
