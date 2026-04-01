@@ -2864,10 +2864,6 @@ PROVIDERS:<br>${getProviderMatrixHTML()}`;
     stopInterruptListener();
     setListeningVisual(false);
     clearSpeechRestartTimer();
-    
-    if (voiceMode && authenticated) {
-       scheduleVoiceRelisten(500);
-    }
  }
 
   function startInterruptListener() {
