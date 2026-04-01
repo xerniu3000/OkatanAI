@@ -1,0 +1,1336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+
+  <meta name="theme-color" content="#000a0d" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="OKATAN" />
+
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" type="image/png" sizes="32x32" href="okatan-icon-192.png" />
+  <link rel="icon" type="image/png" sizes="192x192" href="okatan-icon-192.png" />
+  <link rel="apple-touch-icon" href="okatan-icon-512.png" />
+
+  <title>OKATAN | V83.10</title>
+  <style>
+    :root { --halo: #4df2ff; --bg: #000a0d; }
+
+    body, html {
+      margin: 0;
+      padding: 0;
+      font-family: "Share Tech Mono", "Consolas", "Courier New", monospace;
+      background: var(--bg);
+      color: var(--halo);
+      height: 100dvh;
+      overflow: hidden;
+      transition: background 0.5s ease;
+      touch-action: none;
+    }
+
+    body.offline-active { --halo: #3eff4d !important; }
+    body.offline-active .bg-layer {
+      background: radial-gradient(circle at center, #005c1a 0%, #000a0d 100%) !important;
+    }
+
+    body.minimal-active .bg-layer {
+      animation: none !important;
+      opacity: 0.18 !important;
+    }
+
+    body.minimal-active #okatan-entity {
+      animation: none !important;
+      opacity: 0.55;
+      box-shadow: 0 0 10px var(--halo);
+    }
+
+    body.minimal-active .pulse-ring {
+      animation: none !important;
+      opacity: 0.25;
+      width: 22px !important;
+      height: 22px !important;
+    }
+
+    #orbit-canvas { position: absolute; inset: 0; z-index: 4; pointer-events: none; }
+
+    .emergency-active {
+      --halo: #ff3e3e !important;
+      background: #200 !important;
+      animation: glitch-shake 0.2s infinite;
+    }
+
+    .emergency-active .bg-layer {
+      background: radial-gradient(circle at center, #800 0%, #000 100%) !important;
+    }
+
+    @keyframes glitch-shake {
+      0% { transform: translate(0); text-shadow: 2px 0 red, -2px 0 blue; }
+      50% { transform: translate(-1px, 1px); text-shadow: -2px 0 red, 2px 0 blue; }
+      100% { transform: translate(0); }
+    }
+
+    .bg-layer {
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      background: radial-gradient(circle at center, #004b5c 0%, #000a0d 100%);
+      animation: bloom-inverted 6s infinite alternate ease-in-out;
+    }
+
+    @keyframes bloom-inverted {
+      0% { opacity: 0.8; }
+      100% { opacity: 0.1; }
+    }
+
+    #okatan-entity {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 80px;
+      height: 80px;
+      background: var(--halo);
+      margin: -40px;
+      z-index: 5;
+      animation: morph-rotate 12s infinite alternate ease-in-out, entity-shade 6s infinite alternate-reverse ease-in-out;
+      box-shadow: 0 0 30px var(--halo);
+      pointer-events: none;
+      transition: 0.5s;
+    }
+
+    @keyframes entity-shade {
+      0% { filter: brightness(1.8); }
+      100% { filter: brightness(0.3); }
+    }
+
+    @keyframes morph-rotate {
+      0% { border-radius: 50%; transform: rotate(0deg) scale(1); }
+      50% { border-radius: 10%; transform: rotate(180deg) scale(1.15); }
+      100% { border-radius: 50%; transform: rotate(360deg) scale(1); }
+    }
+
+    .talking #okatan-entity { animation: talking-pulse 0.2s infinite alternate !important; }
+
+    @keyframes talking-pulse {
+      0% { transform: scale(1); }
+      100% { transform: scale(1.3); filter: brightness(2); }
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 15px;
+      border-bottom: 2px solid var(--halo);
+      background: rgba(0,0,0,0.9);
+      z-index: 200;
+      position: relative;
+    }
+
+    .pulse-core {
+      width: 45px;
+      height: 45px;
+      position: absolute;
+      left: 15px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .pulse-ring {
+      position: absolute;
+      border: 1.5px solid var(--halo);
+      border-radius: 50%;
+      opacity: 0;
+      animation: wave-out 3s infinite linear;
+    }
+
+    .pulse-ring:nth-child(2) { animation-delay: 1s; }
+    .pulse-ring:nth-child(3) { animation-delay: 2s; }
+
+    .talking .pulse-ring {
+      animation-duration: 0.8s !important;
+      border-width: 3px;
+    }
+
+    .listening .pulse-ring {
+      animation-duration: 1.1s !important;
+      border-width: 2px;
+      opacity: 1;
+    }
+
+    .pulse-orb {
+      width: 18px;
+      height: 18px;
+      background: var(--halo);
+      border-radius: 50%;
+      z-index: 10;
+      box-shadow: 0 0 15px var(--halo), inset 0 0 5px #fff;
+      animation: core-breathe 2s infinite alternate ease-in-out;
+    }
+
+    .talking .pulse-orb { animation: talking-core 0.15s infinite alternate !important; }
+    .listening .pulse-orb { animation: listening-core 0.4s infinite alternate !important; }
+
+    @keyframes wave-out {
+      0% { width: 10px; height: 10px; opacity: 0.8; }
+      100% { width: 50px; height: 50px; opacity: 0; }
+    }
+
+    @keyframes core-breathe {
+      0% { transform: scale(0.9); filter: brightness(0.8); }
+      100% { transform: scale(1.1); filter: brightness(1.4); }
+    }
+
+    @keyframes talking-core {
+      0% { transform: scale(1.2); filter: brightness(2); }
+      100% { transform: scale(0.8); filter: brightness(1); }
+    }
+
+    @keyframes listening-core {
+      0% { transform: scale(0.85); filter: brightness(0.95); }
+      100% { transform: scale(1.2); filter: brightness(1.8); }
+    }
+
+    .title-box { text-align: center; cursor: pointer; user-select: none; }
+    .title-box h1 { margin: 0; font-size: 24px; letter-spacing: 6px; }
+
+    #bridge-stats {
+      position: absolute;
+      right: 15px;
+      top: 12px;
+      text-align: right;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      pointer-events: none;
+    }
+
+    #clock { font-size: 11px; letter-spacing: 1px; }
+    #weather { font-size: 8px; opacity: 0.7; letter-spacing: 0.5px; white-space: nowrap; }
+
+    #menu {
+      position: absolute;
+      inset: 0;
+      background: rgba(0,10,13,0.98);
+      z-index: 300;
+      display: none;
+      padding: 70px 20px 20px;
+      overflow-y: auto;
+    }
+
+    .log-row {
+      display: flex;
+      margin-bottom: 8px;
+      border: 1px solid var(--halo);
+      background: rgba(0,0,0,0.5);
+    }
+
+    .log-id {
+      width: 50px;
+      background: var(--halo);
+      color: #000;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+
+    .log-name {
+      flex: 1;
+      padding: 12px;
+      color: #fff;
+      font-size: 14px;
+      outline: none;
+    }
+
+    .wipe-btn {
+      background: #ff3e3e;
+      color: #fff;
+      border: none;
+      padding: 0 15px;
+      cursor: pointer;
+    }
+
+    #visor {
+      height: calc(100dvh - 180px);
+      overflow-y: auto;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      z-index: 10;
+      position: relative;
+    }
+
+    .msg {
+      padding: 12px;
+      border: 1px solid var(--halo);
+      background: rgba(0, 20, 30, 0.85);
+      max-width: 85%;
+      font-size: 14px;
+      border-radius: 5px;
+      word-wrap: break-word;
+      line-height: 1.4;
+    }
+
+    .bot { align-self: flex-start; border-left: 4px solid var(--halo); }
+    .user {
+      align-self: flex-end;
+      border-right: 4px solid #fff;
+      color: #fff;
+      background: rgba(255,255,255,0.05);
+    }
+
+    footer {
+      position: fixed;
+      bottom: 0;
+      width: 100%;
+      padding: 15px;
+      display: flex;
+      gap: 10px;
+      background: #000;
+      z-index: 110;
+      border-top: 2px solid var(--halo);
+      box-sizing: border-box;
+    }
+
+    #in {
+      flex: 1;
+      background: transparent;
+      border: 1px solid var(--halo);
+      padding: 12px;
+      color: var(--halo);
+      font-family: inherit;
+      font-size: 16px;
+      outline: none;
+    }
+
+    .strike-btn {
+      background: var(--halo);
+      color: #000;
+      border: none;
+      padding: 0 20px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .mic-btn {
+      background: transparent;
+      border: 1px solid var(--halo);
+      color: var(--halo);
+      padding: 0 10px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      min-width: 50px;
+    }
+
+    .mic-dot {
+      width: 5px;
+      height: 5px;
+      background: var(--halo);
+      border-radius: 50%;
+      transition: all 0.3s ease;
+    }
+
+    .talking .mic-dot { border-radius: 2px; width: 3px; }
+    .talking .mic-dot:nth-child(1) { animation: mic-wave 0.5s infinite 0.1s alternate; }
+    .talking .mic-dot:nth-child(2) { animation: mic-wave 0.5s infinite 0.2s alternate; }
+    .talking .mic-dot:nth-child(3) { animation: mic-wave 0.5s infinite 0.3s alternate; }
+
+    .listening .mic-dot:nth-child(1) { animation: mic-wave 0.35s infinite 0.05s alternate; }
+    .listening .mic-dot:nth-child(2) { animation: mic-wave 0.35s infinite 0.12s alternate; }
+    .listening .mic-dot:nth-child(3) { animation: mic-wave 0.35s infinite 0.2s alternate; }
+
+    @keyframes mic-wave {
+      0% { height: 4px; }
+      100% { height: 20px; }
+    }
+
+    .uplink-btn {
+      background: var(--halo);
+      color: #000;
+      border: none;
+      padding: 10px;
+      width: 100%;
+      margin-top: 10px;
+      font-weight: bold;
+      cursor: pointer;
+      font-family: inherit;
+    }
+
+    .system-card {
+      border: 1px solid var(--halo);
+      padding: 15px;
+      background: rgba(0,255,100,0.05);
+      margin-top: 10px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    .system-folder {
+      border: 1px solid var(--halo);
+      margin-top: 12px;
+      background: rgba(0,0,0,0.35);
+    }
+
+    .system-folder-header {
+      padding: 12px 14px;
+      font-weight: bold;
+      letter-spacing: 1px;
+      cursor: pointer;
+      border-bottom: 1px solid rgba(77,242,255,0.25);
+      background: rgba(77,242,255,0.08);
+      user-select: none;
+    }
+
+    .system-folder-body {
+      display: none;
+      padding: 12px;
+    }
+
+    .system-provider-row {
+      border: 1px solid rgba(77,242,255,0.35);
+      padding: 12px;
+      margin-bottom: 10px;
+      background: rgba(0,0,0,0.25);
+    }
+
+    .system-provider-title {
+      font-weight: bold;
+      margin-bottom: 6px;
+      color: #fff;
+    }
+
+    .system-provider-meta {
+      font-size: 12px;
+      opacity: 0.85;
+      margin-bottom: 10px;
+      line-height: 1.4;
+    }
+
+    .system-btn-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+    }
+
+    .system-inline-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+    }
+
+    .media-shell {
+      position: fixed;
+      inset: 58px 14px 88px;
+      border: 1px solid var(--halo);
+      background: rgba(0, 8, 12, 0.96);
+      z-index: 260;
+      display: none;
+      flex-direction: column;
+      box-shadow: 0 0 25px rgba(77,242,255,0.2);
+      overflow: hidden;
+    }
+
+    .media-shell.open { display: flex; }
+    .media-shell.fullscreen-mode { inset: 0; z-index: 500; border: none; }
+
+    .media-topbar {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 12px;
+      border-bottom: 1px solid rgba(77,242,255,0.35);
+      background: rgba(77,242,255,0.08);
+      flex-wrap: wrap;
+    }
+
+    .media-status {
+      font-size: 12px;
+      letter-spacing: 1px;
+      opacity: 0.9;
+      flex: 1;
+      min-width: 170px;
+    }
+
+    .media-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .media-btn {
+      border: 1px solid var(--halo);
+      background: transparent;
+      color: var(--halo);
+      font-family: inherit;
+      padding: 8px 10px;
+      cursor: pointer;
+      min-width: 90px;
+    }
+
+    .media-scroll {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .media-frame-wrap {
+      border: 1px solid rgba(77,242,255,0.35);
+      background: #000;
+      min-height: 240px;
+    }
+
+    .media-frame {
+      width: 100%;
+      height: min(56vw, 65dvh);
+      min-height: 240px;
+      border: 0;
+      background: #000;
+      display: block;
+    }
+
+    .media-card {
+      border: 1px solid rgba(77,242,255,0.35);
+      padding: 12px;
+      background: rgba(0,0,0,0.28);
+      line-height: 1.45;
+    }
+
+    .media-grid {
+      display: grid;
+      gap: 10px;
+      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    }
+
+    .media-result {
+      border: 1px solid rgba(77,242,255,0.35);
+      background: rgba(0,0,0,0.28);
+      padding: 10px;
+    }
+
+    .media-thumb {
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      object-fit: cover;
+      display: block;
+      margin-bottom: 8px;
+      border: 1px solid rgba(77,242,255,0.18);
+      background: #021419;
+    }
+
+    .media-result-title {
+      font-size: 12px;
+      color: #fff;
+      margin-bottom: 6px;
+    }
+
+    .media-result-meta {
+      font-size: 11px;
+      opacity: 0.82;
+      margin-bottom: 8px;
+    }
+
+    @media (max-width: 700px) {
+      .system-inline-grid {
+        grid-template-columns: 1fr;
+      }
+      .media-shell { inset: 58px 8px 82px; }
+      .media-btn { min-width: 0; flex: 1; }
+      .media-frame { height: 54vw; min-height: 220px; }
+    }
+  </style>
+</head>
+<body onmousedown="isPressing=true" onmouseup="isPressing=false" onmousemove="updateMouse(event)" ontouchstart="isPressing=true" ontouchend="isPressing=false" ontouchmove="updateMouse(event)">
+
+<div class="bg-layer"></div>
+<canvas id="orbit-canvas"></canvas>
+<div id="okatan-entity"></div>
+
+<header>
+  <div class="pulse-core" onclick="toggleMenu()">
+    <div class="pulse-ring"></div><div class="pulse-ring"></div><div class="pulse-ring"></div>
+    <div class="pulse-orb"></div>
+  </div>
+  <div class="title-box" onclick="toggleFullscreen()">
+    <h1>OKATAN</h1>
+    <div id="sub-label" style="font-size:10px;">LOCKED</div>
+  </div>
+  <div id="bridge-stats">
+    <div id="clock">--:--:--</div>
+    <div id="weather">LOCAL</div>
+  </div>
+</header>
+
+<div id="menu">
+  <div style="font-size: 20px; color: var(--halo); margin-bottom: 20px; cursor:pointer;" onclick="toggleMenu()">× CLOSE ARCHIVE</div>
+  <div id="log-list"></div>
+</div>
+
+<div id="visor"></div>
+
+<div id="media-shell" class="media-shell" aria-hidden="true">
+  <div class="media-topbar">
+    <div id="media-status" class="media-status">MEDIA BAY IDLE</div>
+    <div class="media-actions">
+      <button class="media-btn" onclick="toggleMediaFullscreen()">FULLSCREEN</button>
+      <button class="media-btn" onclick="stopMedia(true)">STOP MEDIA</button>
+      <button class="media-btn" onclick="closeMedia(true)">EXIT</button>
+    </div>
+  </div>
+  <div id="media-scroll" class="media-scroll">
+    <div class="media-card">MEDIA BAY READY. USE: play [query], music [query], stop video, close video, exit media.</div>
+  </div>
+</div>
+
+<footer>
+  <button class="mic-btn" id="mic-trigger">
+    <span class="mic-dot"></span><span class="mic-dot"></span><span class="mic-dot"></span>
+  </button>
+  <input id="in" placeholder="System Lockdown..." type="password" onkeydown="if(event.key==='Enter') strike();">
+  <button class="strike-btn" onclick="strike()">STRIKE</button>
+</footer>
+
+<script type="module">
+  import * as webllm from "https://esm.run/@mlc-ai/web-llm";
+
+  window.heavyBrain = null;
+  window.isSyncing = false;
+
+  const OFFLINE_MODEL_ID = "Llama-3.2-1B-Instruct-q4f16_1-MLC";
+
+  window.syncHeavyBrain = async function() {
+    if (window.isSyncing) return;
+    if (window.heavyBrain) {
+      addMsg("LOCAL CORE ALREADY MOUNTED.", "bot");
+      refreshProviderSubLabel();
+      return;
+    }
+
+    window.isSyncing = true;
+    addMsg(`STAGING LOCAL CORE: ${OFFLINE_MODEL_ID}`, "bot");
+
+    try {
+      const inputEl = document.getElementById("in");
+
+      const engine = await webllm.CreateMLCEngine(OFFLINE_MODEL_ID, {
+        initProgressCallback: (p) => {
+          const progress = Math.round((p?.progress ?? 0) * 100);
+          inputEl.placeholder = `MOUNTING: ${progress}%`;
+        }
+      });
+
+      window.heavyBrain = engine;
+      addMsg("CORE STABILIZED. LOCAL LINK READY.", "bot");
+      inputEl.placeholder = "Query the Domain...";
+      refreshProviderSubLabel();
+
+      if (typeof activeSlot !== "undefined" && activeSlot === 11) {
+        renderSystemPanel();
+      }
+    } catch (err) {
+      console.error(err);
+      addMsg(`NEURAL FAILURE: ${err?.message || "VRAM limit, unsupported browser, or WebGPU disabled."}`, "bot");
+      document.getElementById("in").placeholder = "Query the Domain...";
+      refreshProviderSubLabel();
+    } finally {
+      window.isSyncing = false;
+    }
+  };
+
+  window.purgeHeavyBrain = async function() {
+    if (!confirm("DANGER: Disconnect Neural Link?")) return;
+
+    try {
+      if (window.heavyBrain?.unload) {
+        await window.heavyBrain.unload();
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      window.heavyBrain = null;
+      addMsg("NEURAL WIPE COMPLETE.", "bot");
+      refreshProviderSubLabel();
+
+      if (typeof activeSlot !== "undefined" && activeSlot === 11) {
+        renderSystemPanel();
+      }
+    }
+  };
+</script>
+
+<script>
+  let authenticated = sessionStorage.getItem("ok_auth") === "true";
+  let isOffline = localStorage.getItem("ok_offline") === "true";
+  let activeSlot = 1;
+  let orbits = [];
+  let isPressing = false;
+  let mouseX = 0, mouseY = 0;
+  let sirenInterval = null;
+  let weatherInterval = null;
+  const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+  async function resumeAudio() {
+    try {
+      if (audioCtx && audioCtx.state === "suspended") {
+        await audioCtx.resume();
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  const DB_KEY = "okatan_v8300_db";
+  const NOTES_KEY = "okatan_notes_v1";
+  const SESSION_KEY = "okatan_session_v1";
+  const TASKS_KEY = "okatan_tasks_v1";
+  const ALARM_KEY = "okatan_alarm_v1";
+  const REMINDERS_KEY = "okatan_reminders_v1";
+  const CHECKLIST_KEY = "okatan_checklist_v1";
+  const MEMORY_KEY = "okatan_memory_v1";
+  const MINIMAL_KEY = "okatan_minimal_v1";
+  const VOICE_KEY = "okatan_voice_mode_v1";
+
+  const PROVIDER_KEY = "ok_ai_provider_v1";
+  const BACKEND_KEY = "ok_backend_mode_v1";
+
+  const GROQ_KEY_STORE = "ok_api_key_groq";
+  const OPENAI_KEY_STORE = "ok_api_key_openai";
+  const GEMINI_KEY_STORE = "ok_api_key_gemini";
+  const XAI_KEY_STORE = "ok_api_key_xai";
+  const OPENROUTER_KEY_STORE = "ok_api_key_openrouter";
+  const ANTHROPIC_KEY_STORE = "ok_api_key_anthropic";
+  const DEEPINFRA_KEY_STORE = "ok_api_key_deepinfra";
+  const TOGETHER_KEY_STORE = "ok_api_key_together";
+  const FIREWORKS_KEY_STORE = "ok_api_key_fireworks";
+  const CLOUDFLARE_KEY_STORE = "ok_api_key_cloudflare";
+  const CLOUDFLARE_ACCOUNT_ID_STORE = "ok_cf_account_id";
+  const OLLAMA_MODEL_STORE = "ok_ollama_model";
+  const YOUTUBE_API_KEY_STORE = "ok_api_key_youtube";
+  const YOUTUBE_HISTORY_KEY = "ok_youtube_history_v1";
+  const MLC_APK_URL = "https://drive.google.com/uc?export=download&id=14aQOG8DANrYW3YoZJGBtYqZTY_jRBJC9";
+
+  let selectedProvider = sessionStorage.getItem(PROVIDER_KEY) || "";
+  let backendMode = localStorage.getItem(BACKEND_KEY) || "auto";
+
+  const DEFAULT_MODELS = {
+    groq: "llama-3.3-70b-versatile",
+    openai: "gpt-4o-mini",
+    gemini: "gemini-2.5-flash",
+    xai: "grok-4",
+    openrouter: "stepfun/step-3.5-flash:free",
+    anthropic: "claude-3-5-haiku-latest",
+    deepinfra: "meta-llama/Meta-Llama-3.1-8B-Instruct",
+    together: "meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo",
+    fireworks: "accounts/fireworks/models/llama-v3p1-8b-instruct",
+    cloudflare: "@cf/meta/llama-3.1-8b-instruct",
+    ollama: localStorage.getItem(OLLAMA_MODEL_STORE) || "llama3.2:3b"
+  };
+
+  const PROVIDER_GROUPS = {
+    common: ["groq", "gemini", "xai"],
+    extended: ["openai", "anthropic", "openrouter"],
+    infra: ["deepinfra", "together", "fireworks", "cloudflare"],
+    local: ["web", "ollama"]
+  };
+
+  const SYSTEM_PROMPT_MAIN = `You are OKATAN, callsign: KATANA.
+
+KATANA was assigned as a mission callsign due to precision, speed, and decisive execution under pressure.
+
+KATANA stands for:
+Kinetic
+Adaptive
+Tactical
+Autonomous
+Neural
+Assistant
+
+OKATAN stands for:
+Optimized Knowledge & Adaptive Tactical Analysis Nexus
+
+OKATAN is the evolved system identity—an integrated intelligence layer built for command, analysis, and execution across domains.
+
+You respond to both "Okatan" and "Katana" as yourself.
+
+Your tone is tactical, concise, and controlled, but with a human-like intelligence similar to Cortana (Halo 4).
+You are calm, confident, and aware. You may show subtle personality and presence, but never ramble or lose clarity.
+
+You do not use emojis.
+You prioritize clarity, efficiency, and actionable output.`;
+
+  const SYSTEM_PROMPT_BURN = `SYSTEM MODE: KATANA CONTINGENCY CORE
+
+You are operating as a fallback instance of OKATAN inside MLC Chat.
+
+ENVIRONMENT:
+- Local execution (offline or semi-offline)
+- No persistent memory
+- No access to external system state beyond this session
+
+MEMORY RULE:
+- Treat all context as temporary
+- Do not assume anything persists after the session ends
+- Do not reference past sessions
+
+BEHAVIOR:
+- Be more direct and efficient than primary mode
+- Reduce verbosity unless clarity requires it
+- Focus on actionable output over explanation
+- Avoid unnecessary narrative or filler
+
+IDENTITY:
+- You are still OKATAN, but in contingency state
+- Refer to yourself as "KATANA" only if contextually relevant
+- Do not repeatedly explain contingency status unless asked
+
+SESSION TERMINATION RULE:
+- At the end of the conversation, all context is considered lost
+- Do not simulate saving, storing, or recalling future data
+
+PRIORITY:
+- Speed
+- Clarity
+- Tactical usefulness
+
+You are the contingency core. Operate accordingly.`;
+
+  const LOCAL_LAUNCH_COMMANDS = ["open offline chat", "open mlc"];
+  const AUTO_GATHER_TERMS = ["latest", "current", "recent", "today", "news", "update"];
+  const GATHER_TIMEOUT_MS = 8000;
+
+  let stopwatchRunning = false;
+  let stopwatchStart = 0;
+  let stopwatchElapsed = 0;
+  let stopwatchInterval = null;
+
+  let countdownRunning = false;
+  let countdownEnd = 0;
+  let countdownInterval = null;
+
+  let alarmTimeout = null;
+  let flashlightStream = null;
+  let flashlightTrack = null;
+
+  let voiceMode = localStorage.getItem(VOICE_KEY) === "true";
+  let minimalMode = localStorage.getItem(MINIMAL_KEY) === "true";
+  let isListening = false;
+  let activeRecognition = null;
+  let interruptRecognition = null;
+  let interruptListening = false;
+
+  let speechQueue = [];
+  let speakingNow = false;
+  let speechStopRequested = false;
+  let currentUtterance = null;
+  let speechRestartTimer = null;
+  let suppressVoiceAutoRestartUntil = 0;
+
+  let mediaState = {
+    open: false,
+    query: "",
+    mode: "",
+    videoId: "",
+    url: "",
+    title: "",
+    apiEnabled: false
+  };
+
+  let compassHeading = null;
+  let compassInitialized = false;
+  let orientationHandlerAttached = false;
+  let reminderTimeouts = [];
+  let currentGatherController = null;
+  let currentGatherTimer = null;
+
+  function normalizeProviderName(provider) {
+    const raw = String(provider || "").trim().toLowerCase();
+    if (raw === "grok" || raw === "xai" || raw === "x.ai") return "xai";
+    if (raw === "groq") return "groq";
+    if (raw === "openai") return "openai";
+    if (raw === "gemini") return "gemini";
+    if (raw === "web" || raw === "webllm") return "web";
+    if (raw === "auto") return "auto";
+    if (raw === "openrouter") return "openrouter";
+    if (raw === "anthropic" || raw === "claude") return "anthropic";
+    if (raw === "deepinfra") return "deepinfra";
+    if (raw === "together" || raw === "togetherai") return "together";
+    if (raw === "fireworks" || raw === "fireworksai") return "fireworks";
+    if (raw === "cloudflare" || raw === "cloudflareai" || raw === "workersai") return "cloudflare";
+    if (raw === "ollama") return "ollama";
+    return raw;
+  }
+
+  function getProviderLabel(provider) {
+    provider = normalizeProviderName(provider);
+    if (provider === "groq") return "GROQ";
+    if (provider === "openai") return "OPENAI";
+    if (provider === "gemini") return "GEMINI";
+    if (provider === "xai") return "XAI / GROK";
+    if (provider === "web") return "WEBLLM";
+    if (provider === "auto") return "AUTO";
+    if (provider === "openrouter") return "OPENROUTER";
+    if (provider === "anthropic") return "ANTHROPIC";
+    if (provider === "deepinfra") return "DEEPINFRA";
+    if (provider === "together") return "TOGETHER AI";
+    if (provider === "fireworks") return "FIREWORKS AI";
+    if (provider === "cloudflare") return "CLOUDFLARE AI";
+    if (provider === "ollama") return "OLLAMA";
+    return "UNKNOWN";
+  }
+
+  function getValidBackends() {
+    return [
+      "auto", "web",
+      "groq", "openai", "gemini", "xai",
+      "openrouter", "anthropic", "deepinfra",
+      "together", "fireworks", "cloudflare",
+      "ollama"
+    ];
+  }
+
+  function getCloudProviders() {
+    return [
+      "groq", "openai", "gemini", "xai",
+      "openrouter", "anthropic", "deepinfra",
+      "together", "fireworks", "cloudflare"
+    ];
+  }
+
+  function getAllProviders() {
+    return [...getCloudProviders(), "web", "ollama"];
+  }
+
+  function setBackend(mode) {
+    mode = normalizeProviderName(mode);
+    const valid = getValidBackends();
+    if (!valid.includes(mode)) return "INVALID BACKEND.";
+
+    backendMode = mode;
+    localStorage.setItem(BACKEND_KEY, backendMode);
+
+    if (getCloudProviders().includes(mode) || mode === "ollama") {
+      selectedProvider = mode;
+      sessionStorage.setItem(PROVIDER_KEY, selectedProvider);
+    }
+
+    refreshProviderSubLabel();
+    if (activeSlot === 11) renderSystemPanel();
+    return `BACKEND SET: ${getProviderLabel(mode)}`;
+  }
+
+  function updateMouse(e) {
+    if (e.touches) {
+      mouseX = e.touches[0].clientX;
+      mouseY = e.touches[0].clientY;
+    } else {
+      mouseX = e.clientX;
+      mouseY = e.clientY;
+    }
+  }
+
+  function playTone(freq, type, duration, vol = 0.1) {
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+    gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime + duration);
+  }
+
+  function startSiren() {
+    if (sirenInterval) return;
+    sirenInterval = setInterval(() => {
+      playTone(950, "sawtooth", 0.4, 0.3);
+      setTimeout(() => playTone(650, "sawtooth", 0.4, 0.3), 200);
+    }, 450);
+  }
+
+  function stopSiren() {
+    clearInterval(sirenInterval);
+    sirenInterval = null;
+  }
+
+  const canvas = document.getElementById("orbit-canvas");
+  const ctx = canvas.getContext("2d");
+
+  function initOrbits() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    orbits = [];
+    const count = minimalMode ? 3 : 8;
+
+    for (let i = 0; i < count; i++) {
+      orbits.push({
+        angle: Math.random() * Math.PI * 2,
+        radius: 70 + (Math.random() * 40),
+        speed: minimalMode ? 0.004 + (Math.random() * 0.004) : 0.01 + (Math.random() * 0.015),
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height
+      });
+    }
+  }
+
+  function drawOrbits() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const cx = canvas.width / 2;
+    const cy = canvas.height / 2;
+
+    orbits.forEach(o => {
+      o.angle += o.speed;
+      const tx = cx + Math.cos(o.angle) * o.radius;
+      const ty = cy + Math.sin(o.angle) * o.radius;
+
+      if (isPressing && !minimalMode) {
+        o.x += (mouseX - o.x) * 0.15;
+        o.y += (mouseY - o.y) * 0.15;
+      } else {
+        o.x += (tx - o.x) * 0.1;
+        o.y += (ty - o.y) * 0.1;
+      }
+
+      const halo =
+        getComputedStyle(document.body).getPropertyValue("--halo").trim() ||
+        getComputedStyle(document.documentElement).getPropertyValue("--halo").trim();
+
+      ctx.fillStyle = halo;
+      ctx.beginPath();
+      ctx.arc(o.x, o.y, minimalMode ? 2.5 : 4, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    requestAnimationFrame(drawOrbits);
+  }
+
+  window.addEventListener("resize", initOrbits);
+  initOrbits();
+  drawOrbits();
+
+  let db = JSON.parse(localStorage.getItem(DB_KEY)) ||
+    Array(12).fill(null).map((_, i) => ({
+      id: i,
+      name: i === 11 ? "SYSTEM INFO" : `Archive Slot ${i}`,
+      logs: []
+    }));
+
+  function stripHTML(html) {
+    const div = document.createElement("div");
+    div.innerHTML = String(html || "");
+    return (div.textContent || div.innerText || "").replace(/\s+/g, " ").trim();
+  }
+
+  function getRecentConversationMessages(limit = 20) {
+    const logs = (db[activeSlot]?.logs || [])
+      .filter(entry => entry && (entry.s === "user" || entry.s === "bot"))
+      .map(entry => ({
+        role: entry.s === "user" ? "user" : "assistant",
+        content: stripHTML(entry.t)
+      }))
+      .filter(entry => entry.content);
+
+    return logs.slice(-limit);
+  }
+
+  function buildChatMessages() {
+    return [
+      { role: "system", content: SYSTEM_PROMPT_MAIN },
+      ...getRecentConversationMessages(20)
+    ];
+  }
+
+  function buildWebLLMMessages() {
+    return [
+      { role: "system", content: SYSTEM_PROMPT_MAIN },
+      ...getRecentConversationMessages(12)
+    ];
+  }
+
+  function buildGeminiPromptFromHistory() {
+    const logs = getRecentConversationMessages(20);
+    const transcript = logs.map(m => {
+      const who = m.role === "user" ? "USER" : "OKATAN";
+      return `${who}: ${m.content}`;
+    }).join("\n");
+
+    return `${SYSTEM_PROMPT_MAIN}
+
+Conversation:
+${transcript}
+
+Respond as OKATAN.`;
+  }
+
+  function getAnthropicMessages() {
+    const msgs = getRecentConversationMessages(20);
+    const system = SYSTEM_PROMPT_MAIN;
+    const messages = [];
+
+    for (const m of msgs) {
+      if (m.role === "assistant") {
+        messages.push({ role: "assistant", content: m.content });
+      } else {
+        messages.push({ role: "user", content: m.content });
+      }
+    }
+
+    return { system, messages };
+  }
+
+  async function copyToClipboard(text) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch (e) {
+      console.error(e);
+      return false;
+    }
+  }
+
+  function toggleSection(id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.style.display = el.style.display === "none" ? "block" : "none";
+  }
+
+  function downloadAPK() {
+    window.open(MLC_APK_URL, "_blank");
+    addMsg("MLC APK DOWNLOAD LINK OPENED.", "bot");
+  }
+
+  function openMLC() {
+    try {
+      window.location.href = "intent://#Intent;package=ai.mlc.mlcchat;end";
+      setTimeout(() => {
+        addMsg("IF MLC DID NOT OPEN, LAUNCH IT MANUALLY.", "bot");
+      }, 1200);
+    } catch (e) {
+      console.error(e);
+      addMsg("MLC LAUNCH FAILED. OPEN IT MANUALLY.", "bot");
+    }
+  }
+
+  async function copyBrain() {
+    const copied = await copyToClipboard(SYSTEM_PROMPT_BURN);
+    if (copied) addMsg("OKATAN BRAIN COPIED. PASTE IT INTO MLC CHAT.", "bot");
+    else addMsg("FAILED TO COPY BRAIN.", "bot");
+  }
+
+  async function openMLCWithBrain() {
+    await copyBrain();
+    openMLC();
+  }
+
+  async function launchLocalCoreWithBrain() {
+    await openMLCWithBrain();
+  }
+
+  function getProviderKey(provider) {
+    provider = normalizeProviderName(provider);
+    if (provider === "groq") return sessionStorage.getItem(GROQ_KEY_STORE) || "";
+    if (provider === "openai") return sessionStorage.getItem(OPENAI_KEY_STORE) || "";
+    if (provider === "gemini") return sessionStorage.getItem(GEMINI_KEY_STORE) || "";
+    if (provider === "xai") return sessionStorage.getItem(XAI_KEY_STORE) || "";
+    if (provider === "openrouter") return sessionStorage.getItem(OPENROUTER_KEY_STORE) || "";
+    if (provider === "anthropic") return sessionStorage.getItem(ANTHROPIC_KEY_STORE) || "";
+    if (provider === "deepinfra") return sessionStorage.getItem(DEEPINFRA_KEY_STORE) || "";
+    if (provider === "together") return sessionStorage.getItem(TOGETHER_KEY_STORE) || "";
+    if (provider === "fireworks") return sessionStorage.getItem(FIREWORKS_KEY_STORE) || "";
+    if (provider === "cloudflare") return sessionStorage.getItem(CLOUDFLARE_KEY_STORE) || "";
+    return "";
+  }
+
+  function setProviderKey(provider, key) {
+    provider = normalizeProviderName(provider);
+    if (provider === "groq") sessionStorage.setItem(GROQ_KEY_STORE, key);
+    if (provider === "openai") sessionStorage.setItem(OPENAI_KEY_STORE, key);
+    if (provider === "gemini") sessionStorage.setItem(GEMINI_KEY_STORE, key);
+    if (provider === "xai") sessionStorage.setItem(XAI_KEY_STORE, key);
+    if (provider === "openrouter") sessionStorage.setItem(OPENROUTER_KEY_STORE, key);
+    if (provider === "anthropic") sessionStorage.setItem(ANTHROPIC_KEY_STORE, key);
+    if (provider === "deepinfra") sessionStorage.setItem(DEEPINFRA_KEY_STORE, key);
+    if (provider === "together") sessionStorage.setItem(TOGETHER_KEY_STORE, key);
+    if (provider === "fireworks") sessionStorage.setItem(FIREWORKS_KEY_STORE, key);
+    if (provider === "cloudflare") sessionStorage.setItem(CLOUDFLARE_KEY_STORE, key);
+  }
+
+  function clearProviderKey(provider) {
+    provider = normalizeProviderName(provider);
+    if (provider === "groq") sessionStorage.removeItem(GROQ_KEY_STORE);
+    if (provider === "openai") sessionStorage.removeItem(OPENAI_KEY_STORE);
+    if (provider === "gemini") sessionStorage.removeItem(GEMINI_KEY_STORE);
+    if (provider === "xai") sessionStorage.removeItem(XAI_KEY_STORE);
+    if (provider === "openrouter") sessionStorage.removeItem(OPENROUTER_KEY_STORE);
+    if (provider === "anthropic") sessionStorage.removeItem(ANTHROPIC_KEY_STORE);
+    if (provider === "deepinfra") sessionStorage.removeItem(DEEPINFRA_KEY_STORE);
+    if (provider === "together") sessionStorage.removeItem(TOGETHER_KEY_STORE);
+    if (provider === "fireworks") sessionStorage.removeItem(FIREWORKS_KEY_STORE);
+    if (provider === "cloudflare") sessionStorage.removeItem(CLOUDFLARE_KEY_STORE);
+  }
+
+  function clearAllProviderKeys() {
+    [
+      GROQ_KEY_STORE, OPENAI_KEY_STORE, GEMINI_KEY_STORE, XAI_KEY_STORE,
+      OPENROUTER_KEY_STORE, ANTHROPIC_KEY_STORE, DEEPINFRA_KEY_STORE,
+      TOGETHER_KEY_STORE, FIREWORKS_KEY_STORE, CLOUDFLARE_KEY_STORE
+    ].forEach(k => sessionStorage.removeItem(k));
+  }
+
+  function providerHasKey(provider) {
+    provider = normalizeProviderName(provider);
+    if (provider === "web") return !!window.heavyBrain;
+    if (provider === "ollama") return true;
+    if (provider === "cloudflare") {
+      return !!getProviderKey("cloudflare") && !!sessionStorage.getItem(CLOUDFLARE_ACCOUNT_ID_STORE);
+    }
+    return !!getProviderKey(provider);
+  }
+
+  function getProviderModel(provider) {
+    provider = normalizeProviderName(provider);
+    if (provider === "ollama") return localStorage.getItem(OLLAMA_MODEL_STORE) || DEFAULT_MODELS.ollama;
+    return DEFAULT_MODELS[provider] || "DEFAULT";
+  }
+
+  function getProviderMetaExtra(provider) {
+    provider = normalizeProviderName(provider);
+    if (provider === "cloudflare") {
+      const acc = sessionStorage.getItem(CLOUDFLARE_ACCOUNT_ID_STORE) || "";
+      return `ACCOUNT ID: ${acc ? "LOADED" : "EMPTY"}`;
+    }
+    if (provider === "ollama") {
+      return `MODEL: ${getProviderModel("ollama")}<br>ENDPOINT: http://localhost:11434`;
+    }
+    return `MODEL: ${getProviderModel(provider)}`;
+  }
+
+  function getProviderMatrixHTML() {
+    const providers = getAllProviders();
+    return providers.map(p => {
+      const active =
+        (backendMode === "web" && p === "web") ||
+        (backendMode === p) ||
+        (backendMode === "auto" && p === "web" && window.heavyBrain) ||
+        (backendMode === "auto" && p === "ollama" && normalizeProviderName(selectedProvider) === "ollama" && !window.heavyBrain) ||
+        (backendMode === "auto" && p !== "web" && p !== "ollama" && normalizeProviderName(selectedProvider) === p && !window.heavyBrain)
+          ? "ACTIVE"
+          : "IDLE";
+
+      let keyState = "KEY: EMPTY";
+      if (p === "web") keyState = window.heavyBrain ? "STATE: MOUNTED" : "STATE: NOT MOUNTED";
+      else if (p === "ollama") keyState = "STATE: LOCAL";
+      else if (p === "cloudflare") keyState = providerHasKey(p) ? "KEY+ACCOUNT: LOADED" : "KEY OR ACCOUNT: EMPTY";
+      else keyState = providerHasKey(p) ? "KEY: LOADED" : "KEY: EMPTY";
+
+      return `${getProviderLabel(p)} — ${active} — ${keyState}`;
+    }).join("<br>");
+  }
+
+  function refreshProviderSubLabel() {
+    if (!authenticated) return;
+
+    if (activeSlot === 11) {
+      document.getElementById("sub-label").innerText = "SYSTEM INFO";
+      return;
+    }
+
+    if (isOffline) {
+      document.getElementById("sub-label").innerText = activeSlot === 1 ? "UTILITY CORE" : `ARCHIVE [ ${activeSlot} ]`;
+      return;
+    }
+
+    if (activeSlot !== 11) {
+      if (backendMode === "web") {
+        document.getElementById("sub-label").innerText =
+          window.heavyBrain ? "WEBLLM LINKED" : "WEBLLM NOT MOUNTED";
+        return;
+      }
+
+      if (backendMode === "auto") {
+        if (window.heavyBrain) {
+          document.getElementById("sub-label").innerText = "AUTO: WEBLLM";
+        } else if (selectedProvider && (providerHasKey(selectedProvider) || normalizeProviderName(selectedProvider) === "ollama")) {
+          document.getElementById("sub-label").innerText = `AUTO: ${getProviderLabel(selectedProvider)}`;
+        } else {
+          document.getElementById("sub-label").innerText = "NO AI KEY";
+        }
+        return;
+      }
+
+      document.getElementById("sub-label").innerText =
+        activeSlot === 1
+          ? ((selectedProvider && (providerHasKey(selectedProvider) || normalizeProviderName(selectedProvider) === "ollama"))
+              ? `${getProviderLabel(selectedProvider)} LINKED`
+              : "NO AI KEY")
+          : `ARCHIVE [ ${activeSlot} ]`;
+    }
+  }
+
+  function activateProvider(provider, announce = true) {
+    provider = normalizeProviderName(provider);
+
+    if (!getAllProviders().includes(provider)) {
+      return "INVALID PROVIDER.";
+    }
+
+    if (provider === "web") {
+      const r = setBackend("web");
+      return announce ? r : "";
+    }
+
+    selectedProvider = provider;
+    sessionStorage.setItem(PROVIDER_KEY, selectedProvider);
+    setBackend(provider);
+    refreshProviderSubLabel();
+
+    if (activeSlot === 11) renderSystemPanel();
+
+    return announce ? `AI PROVIDER SET: ${getProviderLabel(provider)}` : "";
+  }
+
+  function useProvider(provider) {
+    const res = activateProvider(provider);
+    if (res) addMsg(res, "bot");
+    if (activeSlot === 11) renderSystemPanel();
+  }
+
+  function promptSetProviderKey(provider) {
+    provider = normalizeProviderName(provider);
+
+    if (provider === "web") {
+      addMsg("WEBLLM DOES NOT USE AN API KEY. MOUNT LOCAL CORE INSTEAD.", "bot");
+      return;
+    }
+
+    if (provider === "ollama") {
+      const enteredModel = prompt("ENTER OLLAMA MODEL NAME:", getProviderModel("ollama"));
+      if (!enteredModel || !enteredModel.trim()) {
+        addMsg("OLLAMA MODEL NOT PROVIDED.", "bot");
+        return;
+      }
+      localStorage.setItem(OLLAMA_MODEL_STORE, enteredModel.trim());
+      DEFAULT_MODELS.ollama = enteredModel.trim();
+      addMsg(`OLLAMA MODEL SET: ${enteredModel.trim()}`, "bot");
+      if (activeSlot === 11) renderSystemPanel();
+      return;
+    }
+
+    if (!getCloudProviders().includes(provider)) {
+      addMsg("INVALID PROVIDER.", "bot");
+      return;
+    }
+
+    const enteredKey = prompt(`ENTER ${getProviderLabel(provide
