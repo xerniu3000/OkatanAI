@@ -2885,49 +2885,39 @@ PROVIDERS:<br>${getProviderMatrixHTML()}`;
     };
 
     r.onresult = (e) => {
-      const results = e.results || [];
+  const results = e.results || [];
 
-      for (let i = e.resultIndex || 0; i < results.length; i++) {
-        const transcript = results[i]?.[0]?.transcript?.trim();
-        if (!transcript) continue;
+  for (let i = e.resultIndex || 0; i < results.length; i++) {
+    const transcript = results[i]?.[0]?.transcript?.trim();
+    if (!transcript) continue;
 
-        if (isStopCommand(transcript)) {
-  const heard = normalizeInterruptPhrase(transcript);
-  stopTalking();
-
-  if (heard === "stop media" || heard === "stop video") {
-    stopMedia(true);
-  }
-
-  if (voiceMode && authenticated) {
-    scheduleVoiceRelisten(700);
-  }
-
-  return;
-}
-
-        if (isWakeInterrupt(transcript)) {
-  const followup = stripWakePhrase(transcript);
-  stopTalking();
-
-  setTimeout(() => {
-    if (followup) {
-      document.getElementById("in").value = followup;
-      strike();
-    } else {
-      listenAction(false);
-
-      // if nothing follows, keep voice mode alive instead of letting it die
-      if (voiceMode && authenticated) {
-        scheduleVoiceRelisten(1200);
+    if (isStopCommand(transcript)) {
+      stopTalking();
+      if (normalizeInterruptPhrase(transcript) === "stop media" || normalizeInterruptPhrase(transcript) === "stop video") {
+        stopMedia(true);
       }
+      pauseVoiceAutoRestart(700);
+      return;
     }
-  }, 120);
 
-  return;
-}
-      }
-    };
+    if (isWakeInterrupt(transcript)) {
+      const followup = stripWakePhrase(transcript);
+      stopTalking();
+      pauseVoiceAutoRestart(700);
+
+      setTimeout(() => {
+        if (followup) {
+          document.getElementById("in").value = followup;
+          strike();
+        } else {
+          listenAction(false);
+        }
+      }, 120);
+
+      return;
+    }
+  }
+};
 
     r.onerror = (e) => {
       console.error(e);
