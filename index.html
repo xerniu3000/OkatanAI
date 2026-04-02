@@ -3041,7 +3041,7 @@ PROVIDERS:<br>${getProviderMatrixHTML()}`;
   }
 
   function openMediaShell() {
-    if (!authenticated) return;
+    if (!authenticated || isOffline) return;
     const shell = document.getElementById("media-shell");
     if (!shell) return;
     shell.classList.add("open");
