@@ -4344,6 +4344,14 @@ clear api all`;
     const low = val.toLowerCase();
     let res = "";
 
+    if (!isOffline && !navigator.onLine) {
+  isOffline = true;
+  localStorage.setItem("ok_offline", "true");
+  addMsg("NETWORK LOST. SWITCHING TO OFFLINE MODE.", "bot");
+  setTimeout(() => location.reload(), 200);
+  return;
+    }
+
     if (low === "download mlc apk") {
       downloadAPK();
       talk("MLC APK download opened.");
