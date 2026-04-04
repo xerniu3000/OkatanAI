@@ -4114,15 +4114,19 @@ clear api all`;
   }
 
   window.onload = () => {
-    setupMicButton();
+  if (!navigator.onLine) {
+    isOffline = true;
+    localStorage.setItem("ok_offline", "true");
+  }
 
-    if (!getSessionData().boot) saveSessionData({ commands: 0, boot: Date.now() });
+  setupMicButton();
 
-    const savedAlarm = getAlarmData();
-    if (savedAlarm?.target && savedAlarm.target > Date.now()) {
-      alarmTimeout = setTimeout(triggerAlarm, savedAlarm.target - Date.now());
-    }
+  if (!getSessionData().boot) saveSessionData({ commands: 0, boot: Date.now() });
 
+  const savedAlarm = getAlarmData();
+  if (savedAlarm?.target && savedAlarm.target > Date.now()) {
+    alarmTimeout = setTimeout(triggerAlarm, savedAlarm.target - Date.now());
+  }
     restoreReminders();
     applyMinimalMode(minimalMode);
 
