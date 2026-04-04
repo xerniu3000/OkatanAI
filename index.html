@@ -5027,19 +5027,20 @@ clear api all`;
   window.setYouTubeApiKey = setYouTubeApiKey;
   window.clearYouTubeApiKey = clearYouTubeApiKey;
   window.addEventListener("offline", () => {
-  // already in green? do nothing
   if (isOffline) return;
-
-  closeMedia(false);
 
   isOffline = true;
   localStorage.setItem("ok_offline", "true");
 
+  closeMedia(false);
+
   addMsg("NETWORK LOST. SWITCHING TO OFFLINE MODE.", "bot");
   try { talk("Network lost. Switching to offline mode."); } catch {}
 
-  setTimeout(() => location.reload(), 300);
-  });
+  setTimeout(() => {
+    if (!navigator.onLine) location.reload();
+  }, 300);
+});
 </script>
 </body>
 </html>
