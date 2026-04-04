@@ -5044,11 +5044,11 @@ window.addEventListener("offline", () => {
 
   try { closeMedia(false); } catch (e) { console.error(e); }
 
-  location.reload();
-});
+  document.body.classList.add("offline-active");
+  refreshProviderSubLabel();
 
-window.addEventListener("online", () => {
-  addMsg("NETWORK RESTORED. ONLINE MODE AVAILABLE.", "bot");
+  addMsg("NETWORK LOST. SWITCHING TO OFFLINE MODE.", "bot");
+  try { talk("Network lost. Switching to offline mode."); } catch (e) { console.error(e); }
 });
 </script>
 </body>
