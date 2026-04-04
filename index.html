@@ -4772,11 +4772,23 @@ clear api all`;
   }
 
   function toggleSpectrum() {
-    closeMedia(false);
-    isOffline = !isOffline;
-    localStorage.setItem("ok_offline", isOffline);
-    location.reload();
+  const goingOnline = isOffline;
+
+  if (goingOnline) {
+    // trying to go ONLINE
+    if (!navigator.onLine) {
+      addMsg("NO NETWORK. STAYING IN OFFLINE MODE.", "bot");
+      talk("No network. Staying offline.");
+      return;
+    }
   }
+
+  closeMedia(false); // keep your original behavior
+
+  isOffline = !isOffline;
+  localStorage.setItem("ok_offline", isOffline);
+  location.reload();
+}
 
   function addMsg(t, s, saveLog = true) {
     const d = document.createElement("div");
