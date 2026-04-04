@@ -5054,6 +5054,19 @@ window.addEventListener("offline", () => {
   addMsg("NETWORK LOST. SWITCHING TO OFFLINE MODE.", "bot");
   try { talk("Network lost. Switching to offline mode."); } catch (e) { console.error(e); }
 });
+  document.addEventListener("touchstart", function(e) {
+  if (!navigator.onLine) {
+    const iframe = e.target.closest("iframe");
+
+    if (iframe) {
+      e.preventDefault();
+      e.stopPropagation();
+
+      addMsg("MAP OFFLINE. INTERNET REQUIRED.", "bot");
+      return false;
+    }
+  }
+}, true);
 </script>
 </body>
 </html>
