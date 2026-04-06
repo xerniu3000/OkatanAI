@@ -1,6 +1,6 @@
 const CACHE_NAME = 'okatan-v83-cache';
 const ASSETS = [
-  'indexxed001.html',
+  'index.html',
   'manifest.json',
   'okatan-icon-192.png',
   'okatan-icon-512.png'
