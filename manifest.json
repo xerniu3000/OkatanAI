@@ -2,7 +2,7 @@
   "name": "OKATAN",
   "short_name": "OKATAN",
   "description": "OKATAN tactical AI interface",
-  "start_url": "loading.html",
+  "start_url": "./loading.html",
   "scope": "./",
   "display": "standalone",
   "background_color": "#000a0d",
