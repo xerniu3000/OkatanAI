@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>OKATAN | LOADING</title>
+    <style>
+        body {
+            margin: 0;
+            background: #000a0d;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+
+        #status-container {
+            position: relative;
+            z-index: 2;
+            text-align: center;
+        }
+
+        #status-text {
+            color: #4df2ff;
+            font-family: "Share Tech Mono", monospace;
+            font-size: 18px;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            text-shadow: 0 0 15px rgba(77, 242, 255, 0.6);
+            background: rgba(0, 10, 13, 0.85);
+            padding: 15px 30px;
+            border: 1px solid #4df2ff;
+        }
+
+        #footer-text {
+            position: absolute;
+            bottom: 40px;
+            z-index: 2;
+            color: #4df2ff;
+            font-family: "Share Tech Mono", monospace;
+            font-size: 12px;
+            letter-spacing: 6px;
+            text-transform: uppercase;
+            opacity: 0.4;
+            text-shadow: 0 0 5px #4df2ff;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="matrix"></canvas>
+
+    <div id="status-container">
+        <div id="status-text">INITIALIZING OKATAN</div>
+    </div>
+
+    <div id="footer-text">KATANAVERSE</div>
+
+    <script>
+        const canvas = document.getElementById('matrix');
+        const ctx = canvas.getContext('2d');
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%^&*()";
+        const fontSize = 16;
+        let columns = Math.floor(window.innerWidth / fontSize);
+        let rainDrops = Array.from({ length: columns }).fill(1);
+
+        window.addEventListener('resize', () => {
+            columns = Math.floor(window.innerWidth / fontSize);
+            rainDrops = Array.from({ length: columns }).fill(1);
+        });
+
+        function draw() {
+            ctx.fillStyle = 'rgba(0, 10, 13, 0.1)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.fillStyle = 'rgba(77, 242, 255, 0.35)';
+            ctx.font = fontSize + 'px monospace';
+
+            for (let i = 0; i < rainDrops.length; i++) {
+                const text = alphabet.charAt(Math.floor(Math.random() * alphabet.length));
+                ctx.fillText(text, i * fontSize, rainDrops[i] * fontSize);
+
+                if (rainDrops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+                    rainDrops[i] = 0;
+                }
+
+                rainDrops[i]++;
+            }
+        }
+
+        setInterval(draw, 30);
+
+        setTimeout(() => {
+            window.location.replace('./index.html');
+        }, 3500);
+    </script>
+</body>
+</html>
