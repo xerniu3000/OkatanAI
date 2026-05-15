@@ -1,5 +1,7 @@
 # xerniu3000.github.io/OkatanAI/
 My AI that somewhat works.
-you need the: index.html, manifest, and both the PNGs for the base to work online.
-Offline option needs the: SW.JS and the loading.html
-KatanaVerse.ca and KatanaVerse.net
+
+realistically all you need is the: index.html
+
+want to test it out?
+KatanaVerse.ca and KatanaVerse.net for the next 10yrs
