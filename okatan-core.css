@@ -1,0 +1,61 @@
+/* OKATAN CORE v1.3.1 — styles
+   Extracted from Bestnow6.html. Edit here; index.html references this via <link>. */
+
+  .okc-screen{display:none;flex-direction:column;height:100dvh;background:var(--bg);color:var(--halo);font-family:"Share Tech Mono","Consolas","Courier New",monospace}
+  .okc-bar{display:flex;align-items:center;gap:8px;padding:10px 12px;background:rgba(0,10,13,.92);border-bottom:1px solid rgba(var(--halo-rgb),.22);position:sticky;top:0;z-index:5}
+  .okc-bar .okl-btn{flex:0 0 auto}
+  .okc-bar .okc-title{flex:1;text-align:center;letter-spacing:3px;font-weight:700;font-size:14px;text-shadow:0 0 12px rgba(var(--halo-rgb),.6)}
+  .okc-body{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:12px;padding-bottom:calc(var(--footer-h) + 24px)}
+  .okc-card{background:rgba(var(--halo-rgb),.04);border:1px solid rgba(var(--halo-rgb),.22);border-radius:var(--radius-card);padding:14px;backdrop-filter:blur(6px)}
+  .okc-card-title{font-size:11px;letter-spacing:2.5px;opacity:.7;margin-bottom:10px;text-transform:uppercase}
+  .okc-sub{font-size:12px;opacity:.65;line-height:1.5;margin-top:4px}
+  .okc-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+  .okc-btn{background:rgba(var(--halo-rgb),.08);color:var(--halo);border:1px solid rgba(var(--halo-rgb),.35);padding:10px 14px;border-radius:var(--radius-pill);font-family:inherit;font-size:12px;letter-spacing:1.5px;cursor:pointer;transition:all .18s ease;text-transform:uppercase}
+  .okc-btn:hover,.okc-btn:active{background:rgba(var(--halo-rgb),.18);box-shadow:0 0 14px rgba(var(--halo-rgb),.35)}
+  .okc-btn.primary{background:rgba(var(--halo-rgb),.22);font-weight:700}
+  .okc-btn.danger{border-color:rgba(255,90,90,.55);color:#ff8080}
+  .okc-btn.danger:hover{background:rgba(255,90,90,.18);box-shadow:0 0 14px rgba(255,90,90,.4)}
+  .okc-input,.okc-select{width:100%;background:rgba(0,0,0,.45);color:var(--halo);border:1px solid rgba(var(--halo-rgb),.32);border-radius:12px;padding:11px 12px;font-family:inherit;font-size:13px;box-sizing:border-box;outline:none}
+  .okc-input:focus,.okc-select:focus{border-color:var(--halo);box-shadow:0 0 10px rgba(var(--halo-rgb),.35)}
+  .okc-chat{display:flex;flex-direction:column;gap:10px;min-height:140px;max-height:50dvh;overflow-y:auto;padding:8px;background:rgba(0,0,0,.35);border-radius:14px;border:1px solid rgba(var(--halo-rgb),.18)}
+  .okc-msg{padding:9px 12px;border-radius:var(--radius-msg);max-width:88%;font-size:13px;line-height:1.5;white-space:pre-wrap;word-wrap:break-word}
+  .okc-msg.user{align-self:flex-end;background:rgba(var(--halo-rgb),.18);border:1px solid rgba(var(--halo-rgb),.4)}
+  .okc-msg.assistant{align-self:flex-start;background:rgba(0,0,0,.5);border:1px solid rgba(var(--halo-rgb),.22)}
+  .okc-msg.system{align-self:center;font-size:11px;opacity:.6;font-style:italic}
+  .okc-msg.tool{align-self:flex-start;background:rgba(255,200,60,.08);border:1px solid rgba(255,200,60,.35);color:#ffd060;font-size:11px}
+  .okc-status{font-size:11px;letter-spacing:2px;opacity:.7;text-align:center;padding:6px}
+  .okc-status.live{color:#3eff4d;animation:okcPulse 1.4s ease-in-out infinite}
+  @keyframes okcPulse{0%,100%{opacity:.55}50%{opacity:1}}
+  .okc-input-row{display:flex;gap:8px;align-items:center}
+  .okc-input-row .okc-input{flex:1}
+  .okc-mic-btn{flex:0 0 auto;width:46px;height:46px;border-radius:50%;background:rgba(var(--halo-rgb),.12);border:1px solid rgba(var(--halo-rgb),.45);color:var(--halo);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+  .okc-mic-btn.live{background:rgba(255,80,80,.25);border-color:#ff5050;color:#ff8080;animation:okcPulse 1.2s ease-in-out infinite}
+  #okc-handsfree-btn.live{background:rgba(62,255,77,.18);border-color:#3eff4d;color:#3eff4d;animation:okcPulse 1.4s ease-in-out infinite}
+  #okc-handsfree-btn.paused{background:rgba(255,200,60,.15);border-color:#ffd060;color:#ffd060}
+  #okc-wake-btn.live{background:rgba(155,123,255,.18);border-color:#9b7bff;color:#9b7bff;animation:okcPulse 2.4s ease-in-out infinite}
+  #okc-vision-live.live{background:rgba(255,140,40,.2);border-color:#ff8c28;color:#ff8c28;animation:okcPulse 1.6s ease-in-out infinite}
+  .okc-hue-light-row{display:flex;align-items:center;gap:8px;padding:8px;background:rgba(0,0,0,.35);border:1px solid rgba(var(--halo-rgb),.18);border-radius:10px;margin-bottom:6px;font-size:12px}
+  .okc-hue-light-row .okc-hue-name{flex:1}
+  .okc-hue-dot{width:14px;height:14px;border-radius:50%;border:1px solid rgba(255,255,255,.3)}
+  .okc-hue-toggle{background:rgba(var(--halo-rgb),.12);color:var(--halo);border:1px solid rgba(var(--halo-rgb),.45);padding:6px 10px;border-radius:14px;font-size:10px;cursor:pointer;font-family:inherit;letter-spacing:1.5px}
+  .okc-hue-toggle.on{background:rgba(62,255,77,.18);border-color:#3eff4d;color:#3eff4d}
+  .okc-hue-slider{flex:1;accent-color:var(--halo)}
+  .okc-mem-item{padding:8px 10px;background:rgba(0,0,0,.35);border:1px solid rgba(var(--halo-rgb),.18);border-radius:10px;margin-bottom:6px;font-size:12px;display:flex;align-items:center;gap:8px}
+  .okc-mem-item .okc-mem-text{flex:1;line-height:1.4}
+  .okc-mem-item .okc-mem-tag{font-size:10px;opacity:.5;letter-spacing:1.5px}
+  .okc-mem-del{background:transparent;border:none;color:#ff8080;cursor:pointer;font-size:16px;padding:2px 6px}
+  .okc-confirm-overlay{position:fixed;inset:0;background:rgba(0,5,8,.78);backdrop-filter:blur(8px);display:none;align-items:center;justify-content:center;z-index:9999;padding:24px}
+  .okc-confirm-overlay.show{display:flex}
+  .okc-confirm-box{background:#000a0d;border:1px solid var(--halo);border-radius:18px;padding:22px;max-width:420px;width:100%;box-shadow:0 0 40px rgba(var(--halo-rgb),.4)}
+  .okc-confirm-box h3{margin:0 0 10px;font-size:14px;letter-spacing:2.5px;color:var(--halo)}
+  .okc-confirm-box p{margin:0 0 16px;font-size:13px;opacity:.85;line-height:1.5}
+  .okc-confirm-row{display:flex;gap:10px;justify-content:flex-end}
+  .okc-tools-list{font-size:11px;line-height:1.6;opacity:.75;max-height:160px;overflow-y:auto}
+  .okc-tools-list code{color:var(--halo);background:rgba(var(--halo-rgb),.1);padding:1px 5px;border-radius:4px}
+  .okc-tab-row{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid rgba(var(--halo-rgb),.18)}
+  .okc-tab{padding:9px 4px;background:rgba(var(--halo-rgb),.04);border:1px solid rgba(var(--halo-rgb),.18);color:var(--halo);opacity:.65;cursor:pointer;font-family:inherit;font-size:11px;letter-spacing:1.5px;border-radius:8px;white-space:nowrap}
+  .okc-tab.active{opacity:1;background:rgba(var(--halo-rgb),.18);border-color:var(--halo);box-shadow:0 0 10px rgba(var(--halo-rgb),.25)}
+  .okc-tab-pane{display:none}
+  .okc-tab-pane.active{display:flex;flex-direction:column;gap:10px}
+  .okc-wake-banner{position:fixed;top:14px;left:50%;transform:translateX(-50%);background:rgba(155,123,255,.22);border:1px solid #9b7bff;color:#fff;padding:8px 16px;border-radius:999px;font-size:11px;letter-spacing:2px;z-index:9998;display:none;box-shadow:0 0 24px rgba(155,123,255,.5);font-family:"Share Tech Mono",monospace}
+  .okc-wake-banner.show{display:block;animation:okcPulse 1.6s ease-in-out infinite}
