@@ -2,7 +2,7 @@
 My AI that somewhat works.
 
 realistically all you need is the: 
-1. solo file.html
+1. solo file.notes
 
 if you want to operate more functionally:
 2. index.html
