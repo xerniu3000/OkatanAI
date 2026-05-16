@@ -11,7 +11,7 @@ if you want to operate more functionally:
    
 3.okatan-core.css
 
-5. okatan-core.js
+4. okatan-core.js
 
 want to test it out?
 KatanaVerse.ca and KatanaVerse.net for the next 10yrs
